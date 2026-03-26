@@ -22,7 +22,7 @@ function MessageItem({ message }: MessageItemProps) {
         </Avatar>
       )}
       <div className={`message-bubble ${isUser ? "message-bubble--user" : "message-bubble--ai"}`}>
-        <div className="message-text">
+        <div className="message-text px-2">
           <ReactMarkdown>{message.content}</ReactMarkdown>
         </div>
       </div>
