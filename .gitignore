@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+node_modules
+.next
+.npm
+
+# iCloud nosync symlink targets
+node_modules.nosync
+.next.nosync
