@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar } from "antd";
+import ReactMarkdown from "react-markdown";
 
 interface MessageItemProps {
   message: {
@@ -21,7 +22,9 @@ function MessageItem({ message }: MessageItemProps) {
         </Avatar>
       )}
       <div className={`message-bubble ${isUser ? "message-bubble--user" : "message-bubble--ai"}`}>
-        <p className="message-text">{message.content}</p>
+        <div className="message-text">
+          <ReactMarkdown>{message.content}</ReactMarkdown>
+        </div>
       </div>
       {isUser && (
         <Avatar className="message-avatar message-avatar--user" size={36}>
