@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { message } from "antd";
 import type { VocabularyResult } from "../../api/vocabulary/route";
 import SearchPanel from "./components/SearchPanel";
 import VocabResultPanel from "./components/VocabResultPanel";
+import { fetchVocabularyHistory, upsertVocabularyHistory } from "../../../utils/supabase/vocabulary";
 
 const isEnglishOnly = (text: string) => /^[a-zA-Z\s'\-]+$/.test(text.trim());
 
@@ -16,6 +17,18 @@ export default function CoLanhVocabularyPage(): React.ReactElement {
   const [hasSearched, setHasSearched] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadHistory() {
+      const dbHistory = await fetchVocabularyHistory();
+      if (isMounted && dbHistory.length > 0) {
+        setHistory(dbHistory);
+      }
+    }
+    loadHistory();
+    return () => { isMounted = false; };
+  }, []);
 
   const doSearch = async (word: string) => {
     const trimmed = word.trim();
@@ -37,7 +50,12 @@ export default function CoLanhVocabularyPage(): React.ReactElement {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Lỗi không xác định");
       setResult(data as VocabularyResult);
+      
+      // Update UI optimistically
       setHistory((prev) => [trimmed, ...prev.filter((h) => h !== trimmed)].slice(0, 8));
+      
+      // Save to Supabase in the background
+      upsertVocabularyHistory(trimmed).catch(console.error);
     } catch (err: unknown) {
       messageApi.error(err instanceof Error ? err.message : "Có lỗi xảy ra!");
     } finally {

@@ -2,24 +2,65 @@
 
 import { useChat } from "ai/react";
 import { Button, Input, Typography, App } from "antd";
-import { ArrowUpOutlined } from "@ant-design/icons";
-import { useEffect, useRef } from "react";
+import { ArrowUpOutlined, MenuOutlined } from "@ant-design/icons";
+import { useEffect, useRef, useState } from "react";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import MessageItem from "./MessageItem";
+import { createChatSession, fetchChatMessages, saveMessage, updateChatTitle } from "../utils/supabase/chat";
+import { Message } from "ai";
 
-// Moved destructuring into component
-
-
-export default function ChatWindow({ level, weakness }: { level: string; weakness: string }) {
-  const { modal, message: messageApi, notification } = App.useApp();
+export default function ChatWindow({ 
+  level, 
+  weakness, 
+  externalChatId, 
+  onChatCreated, 
+  onChatTitleUpdated,
+  onOpenMobileSidebar
+}: { 
+  level: string; 
+  weakness: string; 
+  externalChatId: string | null; 
+  onChatCreated: (id: string) => void; 
+  onChatTitleUpdated: () => void;
+  onOpenMobileSidebar: () => void;
+}) {
+  const { notification } = App.useApp();
   const { Text } = Typography;
 
+  const [initialMessages, setInitialMessages] = useState<Message[]>([]);
+  const savedMessageIds = useRef<Set<string>>(new Set());
+
+  // Watch externalChatId changes to load history
+  useEffect(() => {
+    async function loadHistory() {
+      if (!externalChatId) {
+        setInitialMessages([]);
+        savedMessageIds.current.clear();
+        return;
+      }
+      // Silently fetch UI without spinner flash
+      const history = await fetchChatMessages(externalChatId);
+      setInitialMessages(history);
+      savedMessageIds.current.clear();
+      history.forEach(m => savedMessageIds.current.add(m.id));
+    }
+    loadHistory();
+  }, [externalChatId]);
+
   const { messages, input, handleInputChange, handleSubmit, isLoading } =
-    useChat({ 
+    useChat({
       api: "/api/chat",
+      id: externalChatId || "default",
+      initialMessages,
       body: {
         level,
         weakness,
+      },
+      onFinish: async (message) => {
+        if (externalChatId) {
+          await saveMessage(externalChatId, message);
+          savedMessageIds.current.add(message.id);
+        }
       },
       onError: (error) => {
         notification.error({
@@ -41,32 +82,72 @@ export default function ChatWindow({ level, weakness }: { level: string; weaknes
       const { scrollHeight, clientHeight } = scrollContainerRef.current;
       scrollContainerRef.current.scrollTo({
         top: scrollHeight - clientHeight,
-        behavior: "smooth"
+        behavior: "auto"
       });
     }
   }, [messages]);
 
-  // Re-focus input after AI finishes responding
   useEffect(() => {
     if (!isLoading) {
       inputRef.current?.focus();
     }
   }, [isLoading]);
 
+  // Sync user messages to Supabase
+  useEffect(() => {
+    async function syncUserMessage() {
+      if (!externalChatId) return;
+      const latestMessage = messages[messages.length - 1];
+      if (latestMessage && latestMessage.role === "user" && !savedMessageIds.current.has(latestMessage.id)) {
+        savedMessageIds.current.add(latestMessage.id);
+        await saveMessage(externalChatId, latestMessage);
+      }
+    }
+    syncUserMessage();
+  }, [messages, externalChatId]);
+
+  const onCustomSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!isLoading && input.trim()) {
+      const isFirstMessage = messages.length === 0 && initialMessages.length === 0;
+      const currentInput = input;
+
+      if (!externalChatId) {
+        createChatSession().then(newId => {
+          if (newId) {
+            onChatCreated(newId);
+            updateChatTitle(newId, currentInput.slice(0, 40)).then(() => onChatTitleUpdated());
+          }
+        });
+      } else if (isFirstMessage) {
+        // If the chat was created instantly but has no messages, update its title in background
+        updateChatTitle(externalChatId, currentInput.slice(0, 40)).then(() => onChatTitleUpdated());
+      }
+      
+      // Call handleSubmit synchronously to eliminate UI lag/double submit
+      handleSubmit(e);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!isLoading && input.trim()) {
-        handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
-      }
+      onCustomSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
     }
   };
 
   return (
-    <div className="chat-window">
+    <div className="chat-window" style={{ height: "100%" }}>
       {/* Header */}
-      <div className="chat-header">
-        <div className="chat-header-info">
+      <div className="chat-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="chat-header-info" style={{ display: 'flex', alignItems: 'center' }}>
+          <Button 
+            type="text" 
+            icon={<MenuOutlined />} 
+            className="chat-mobile-menu-btn"
+            onClick={onOpenMobileSidebar}
+            style={{ marginRight: 12, color: "var(--text-secondary)" }}
+          />
           <span className="chat-header-avatar">👩‍🏫</span>
           <div>
             <Text className="chat-header-name">Cô Minh</Text>
@@ -87,26 +168,6 @@ export default function ChatWindow({ level, weakness }: { level: string; weaknes
             <Text className="chat-empty-desc">
               Hãy bắt đầu bằng cách nhập một câu tiếng Anh — cô sẽ sửa và giúp bạn luyện tập ngay! 😄
             </Text>
-            <div className="chat-suggestions">
-              {[
-                "I go to school yesterday",
-                "What mean happy?",
-                "Tell me about yourself",
-              ].map((s) => (
-                <button
-                  key={s}
-                  className="suggestion-chip"
-                  onClick={() => {
-                    const syntheticEvent = {
-                      target: { value: s },
-                    } as React.ChangeEvent<HTMLTextAreaElement>;
-                    handleInputChange(syntheticEvent);
-                  }}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
@@ -127,7 +188,7 @@ export default function ChatWindow({ level, weakness }: { level: string; weaknes
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="chat-input-area">
+      <form onSubmit={onCustomSubmit} className="chat-input-area">
         <div className="chat-input-wrapper">
           <Input.TextArea
             ref={inputRef}

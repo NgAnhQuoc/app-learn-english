@@ -35,6 +35,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
 
   try {
+    //tạo thêm version dùng sdk của open ai
     const { object } = await generateObject({
       model: openai(process.env.OPENAI_MODEL ?? "gpt-4o-mini"),
       schema: VocabularySchema,

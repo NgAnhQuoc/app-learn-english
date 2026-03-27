@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
-import { AutoComplete, Button, Typography } from "antd";
+import React, { useState, useRef } from "react";
+import { Button, Typography } from "antd";
 import {
   SearchOutlined,
   ThunderboltOutlined,
@@ -32,64 +32,29 @@ export default function SearchPanel({
   onQueryChange,
   onSearch,
 }: SearchPanelProps): React.ReactElement {
-  const [suggestions, setSuggestions] = useState<{ value: string }[]>([]);
   const [localError, setLocalError] = useState("");
-  // Track whether the current query was confirmed via dropdown or hint click
   const confirmedRef = useRef(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const isEnglishOnly = (text: string) => /^[a-zA-Z\s'\-]+$/.test(text.trim());
-
-  const fetchSuggestions = useCallback(async (q: string) => {
-    if (q.length < 2 || !isEnglishOnly(q)) { setSuggestions([]); return; }
-    try {
-      const res = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(q)}*&max=8`);
-      const data: { word: string }[] = await res.json();
-      setSuggestions(data.map((d) => ({ value: d.word })));
-    } catch {
-      setSuggestions([]);
-    }
-  }, []);
 
   const handleChange = (val: string) => {
-    confirmedRef.current = false; // user is typing again → unconfirm
+    confirmedRef.current = false;
     onQueryChange(val);
     setLocalError("");
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
   };
 
-  // Called only when user selects from dropdown or clicks a hint/history tag
+  // Called when user clicks a hint/history tag
   const confirmAndSearch = (word: string) => {
     confirmedRef.current = true;
     setLocalError("");
-    setSuggestions([]);
     onQueryChange(word);
     onSearch(word);
   };
 
-  // Called by Enter / button — validate before searching
+  // Called by Enter / button
   const trySearch = () => {
     const trimmed = query.trim();
     if (!trimmed) return;
-
-    // Already confirmed via dropdown or hint
-    if (confirmedRef.current) {
-      onSearch(trimmed);
-      return;
-    }
-
-    // Manually typed: only allow if exact match in suggestions OR no suggestions (complete word)
-    const exactMatch = suggestions.some(
-      (s) => s.value.toLowerCase() === trimmed.toLowerCase()
-    );
-
-    if (exactMatch || suggestions.length === 0) {
-      confirmedRef.current = true;
-      onSearch(trimmed);
-    } else {
-      setLocalError("Chọn từ gợi ý bên dưới hoặc nhập đầy đủ từ nhé! 👇");
-    }
+    confirmedRef.current = true;
+    onSearch(trimmed);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -120,30 +85,20 @@ export default function SearchPanel({
         </div>
       )}
 
-      {/* Search input with autocomplete */}
+      {/* Search input */}
       <div className="vocab-input-group">
-        <AutoComplete
-          options={suggestions}
-          value={query}
-          onChange={handleChange}
-          onSelect={(val: string) => confirmAndSearch(val)}
-          style={{ width: "100%" }}
-          classNames={{ popup: { root: "vocab-autocomplete-dropdown" } }}
-          filterOption={false}
-        >
-          <div className={`vocab-input-wrap${combinedError ? " vocab-input-wrap--error" : ""}`}>
-            <SearchOutlined className="vocab-input-prefix" />
-            <input
-              className="vocab-ac-input"
-              placeholder="Nhập từ tiếng Anh..."
-              value={query}
-              onChange={(e) => handleChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </div>
-        </AutoComplete>
+        <div className={`vocab-input-wrap${combinedError ? " vocab-input-wrap--error" : ""}`}>
+          <SearchOutlined className="vocab-input-prefix" />
+          <input
+            className="vocab-ac-input"
+            placeholder="Nhập từ tiếng Anh..."
+            value={query}
+            onChange={(e) => handleChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
         {combinedError && (
           <div className="vocab-error-alert">
             <WarningFilled className="vocab-error-icon" />
@@ -184,11 +139,11 @@ export default function SearchPanel({
       {history.length > 0 && (
         <>
           <div className="vocab-section-label" style={{ marginTop: 16 }}>
-            <HistoryOutlined style={{ marginRight: 5 }} />Đã tra gần đây
+            <HistoryOutlined style={{ marginRight: 5 }} />Đã tra gần đây ({history.length}/8)
           </div>
-          <div className="vocab-history">
+          <div className="vocab-hints">
             {history.map((h) => (
-              <button key={h} className="vocab-history-item" onClick={() => confirmAndSearch(h)}>
+              <button key={h} className="vocab-hint-tag" onClick={() => confirmAndSearch(h)}>
                 {h}
               </button>
             ))}
