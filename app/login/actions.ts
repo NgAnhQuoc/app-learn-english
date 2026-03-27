@@ -3,7 +3,10 @@
 import { cookies } from "next/headers";
 
 export async function authenticate(account: string, pass: string) {
-  if (account === process.env.ACCOUNT && pass === process.env.PASSWORD) {
+  const envAccount = (process.env.ACCOUNT || "").trim();
+  const envPassword = (process.env.PASSWORD || "").trim();
+  
+  if (account.trim() === envAccount && pass.trim() === envPassword) {
     const cookieStore = await cookies();
     cookieStore.set("co_minh_auth", "authenticated", {
       httpOnly: true,
