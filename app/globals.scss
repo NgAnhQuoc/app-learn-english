@@ -332,6 +332,16 @@ body {
   &--ai   { flex-direction: row; }
 }
 
+// Historical batch wrapper — fade-in the whole group, no per-row bounce
+.chat-history-batch {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.4s ease;
+
+  .message-row { animation: none; }
+}
+
 // ── Avatars ───────────────────────────────
 .message-avatar {
   width: 36px !important;

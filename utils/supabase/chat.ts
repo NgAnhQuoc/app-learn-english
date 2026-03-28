@@ -10,7 +10,7 @@ export interface ChatSession {
 
 export async function createChatSession(): Promise<string | null> {
   const newId = uuidv4();
-  const { error } = await supabase.from("chats").insert([{ id: newId }]);
+  const { error } = await supabase.from("chats").insert([{ id: newId, title: "Đoạn chat mới" }]);
   if (error) {
     console.error("Error creating chat session:", error);
     return null;

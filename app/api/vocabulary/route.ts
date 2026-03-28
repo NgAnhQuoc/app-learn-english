@@ -1,23 +1,21 @@
-import { generateObject } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 
 const VocabularySchema = z.object({
-  word: z.string().describe("The English word"),
-  phonetic: z.string().describe("IPA phonetic transcription, e.g. /lɜːrn/"),
-  partOfSpeech: z.string().describe("Primary part of speech — full word: noun, verb, adjective, adverb, preposition, conjunction, etc. NEVER use abbreviations."),
+  word: z.string(),
+  phonetic: z.string(),
+  partOfSpeech: z.string(),
   meanings: z.array(z.object({
-    pos: z.string().describe("Part of speech — full word ONLY: 'noun', 'verb', 'adjective', 'adverb', 'preposition'. NEVER use 'adj', 'adv', 'n.', 'v.' etc."),
-    translations: z.array(z.string()).describe("2-3 short Vietnamese translations for this part of speech"),
-  })).describe("Meanings grouped by part of speech, like a real dictionary (may have 1-3 groups)"),
-  meaning: z.string().describe("Vietnamese meaning explained in Cô Lành's humorous style"),
-  example: z.string().describe("A funny, witty example sentence in English"),
-  exampleTranslation: z.string().describe("Vietnamese translation of the example sentence"),
-  grammarNotes: z.array(z.string()).describe("List of grammar notes related to this word"),
-  level: z.enum(["Dễ", "Trung bình", "Khó"]).describe("Difficulty level"),
-  synonyms: z.array(z.string()).describe("2-3 synonyms").optional(),
-  antonyms: z.array(z.string()).describe("1-2 antonyms if applicable").optional(),
+    pos: z.string(),
+    translations: z.array(z.string()),
+  })),
+  meaning: z.string(),
+  example: z.string(),
+  exampleTranslation: z.string(),
+  grammarNotes: z.array(z.string()),
+  level: z.enum(["Dễ", "Trung bình", "Khó"]),
+  synonyms: z.array(z.string()).optional(),
+  antonyms: z.array(z.string()).optional(),
 });
 
 export type VocabularyResult = z.infer<typeof VocabularySchema>;
@@ -29,32 +27,56 @@ export async function POST(req: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Từ vựng không hợp lệ" }, { status: 400 });
   }
 
-  // English-only guard
   if (!/^[a-zA-Z\s'\-]+$/.test(word.trim())) {
     return NextResponse.json({ error: "Chỉ tra cứu từ tiếng Anh nhé! Cô Lành không biết tiếng khác 😅" }, { status: 400 });
   }
 
   try {
-    //tạo thêm version dùng sdk của open ai
-    const { object } = await generateObject({
-      model: openai(process.env.OPENAI_MODEL ?? "gpt-4o-mini"),
-      schema: VocabularySchema,
-      prompt: `Bạn là Cô Lành — một cô giáo từ điển sống động, hài hước, lầy lội nhưng rất chuẩn kiến thức.
-Hãy phân tích từ vựng tiếng Anh: "${word.trim()}"
+    const openaiRes = await fetch(`${process.env.OPENAI_API_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `Bạn là Cô Lành — một cô giáo từ điển sống động, hài hước, lầy lội nhưng rất chuẩn kiến thức. Luôn trả về JSON hợp lệ theo đúng schema được yêu cầu.`,
+          },
+          {
+            role: "user",
+            content: `Phân tích từ vựng tiếng Anh: "${word.trim()}"
 
-QUAN TRỌNG: Chỉ phân tích từ tiếng Anh. Nếu nhập vào không phải tiếng Anh, hãy trả về thông báo lỗi.
-
-Yêu cầu:
-- meanings: mảng các nhóm nghĩa phân loại theo từ loại (giống từ điển thực sự). Mỗi phần từ loại có field "pos" (ví dụ "noun", "verb", "adj") và "translations" (2-3 nghĩa ngắn bằng tiếng Việt). Ví dụ cho "run": [{pos:"verb",translations:["chạy","vận hành"]},{pos:"noun",translations:["cuộc chạy"]}]
-- meaning: giải thích nghĩa bằng tiếng Việt theo phong cách hài hước của Cô Lành (1-2 câu)
-- example: câu ví dụ tiếng Anh sáng tạo, thú vị, liên quan đến đời sống học sinh/sinh viên Việt Nam
+QUAN TRỌNG: Chỉ phân tích từ tiếng Anh. Trả về JSON với đúng các field sau:
+- word: từ tiếng Anh
+- phonetic: phiên âm IPA chuẩn (US), ví dụ /lɜːrn/
+- partOfSpeech: từ loại chính — dùng từ đầy đủ: noun, verb, adjective, adverb... KHÔNG viết tắt
+- meanings: mảng nhóm nghĩa theo từ loại, mỗi phần tử có "pos" (noun/verb/adjective... đầy đủ, KHÔNG viết tắt) và "translations" (2-3 nghĩa ngắn tiếng Việt). Ví dụ cho "run": [{"pos":"verb","translations":["chạy","vận hành"]},{"pos":"noun","translations":["cuộc chạy"]}]
+- meaning: giải thích nghĩa tiếng Việt theo phong cách hài hước Cô Lành (1-2 câu)
+- example: câu ví dụ tiếng Anh sáng tạo, liên quan đời sống học sinh/sinh viên Việt Nam
 - exampleTranslation: dịch câu ví dụ sang tiếng Việt tự nhiên
-- grammarNotes: 2-4 lưu ý ngữ pháp thực tế khi dùng từ này
-- phonetic: phiên âm IPA chuẩn (US pronunciation)
-- level: đánh giá độ khó thực tế cho người học TOEIC`,
+- grammarNotes: mảng 2-4 lưu ý ngữ pháp thực tế
+- level: "Dễ" | "Trung bình" | "Khó"
+- synonyms: mảng 2-3 từ đồng nghĩa (optional)
+- antonyms: mảng 1-2 từ trái nghĩa nếu có (optional)`,
+          },
+        ],
+      }),
     });
 
-    return NextResponse.json(object);
+    if (!openaiRes.ok) {
+      throw new Error(`OpenAI error: ${openaiRes.status}`);
+    }
+
+    const data = await openaiRes.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("Empty response");
+
+    const parsed = VocabularySchema.parse(JSON.parse(content));
+    return NextResponse.json(parsed);
   } catch {
     return NextResponse.json(
       { error: "Cô Lành đang bận... hoặc từ này Cô không biết 😅 Thử từ khác nhé!" },

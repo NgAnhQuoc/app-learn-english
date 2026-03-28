@@ -15,7 +15,8 @@ export default function ChatWindow({
   externalChatId, 
   onChatCreated, 
   onChatTitleUpdated,
-  onOpenMobileSidebar
+  onOpenMobileSidebar,
+  onMessagesLoaded,
 }: { 
   level: string; 
   weakness: string; 
@@ -23,12 +24,19 @@ export default function ChatWindow({
   onChatCreated: (id: string) => void; 
   onChatTitleUpdated: () => void;
   onOpenMobileSidebar: () => void;
+  onMessagesLoaded?: () => void;
 }) {
   const { notification } = App.useApp();
   const { Text } = Typography;
 
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  // Increments each time historical messages are freshly loaded — used to
+  // show a fade-in on the whole batch instead of per-message bounce.
+  const [historyRevealKey, setHistoryRevealKey] = useState(0);
   const savedMessageIds = useRef<Set<string>>(new Set());
+  const onMessagesLoadedRef = useRef(onMessagesLoaded);
+  useEffect(() => { onMessagesLoadedRef.current = onMessagesLoaded; }, [onMessagesLoaded]);
 
   // Watch externalChatId changes to load history
   useEffect(() => {
@@ -36,13 +44,24 @@ export default function ChatWindow({
       if (!externalChatId) {
         setInitialMessages([]);
         savedMessageIds.current.clear();
+        onMessagesLoadedRef.current?.();
         return;
       }
+      setIsLoadingMessages(true);
       // Silently fetch UI without spinner flash
       const history = await fetchChatMessages(externalChatId);
       setInitialMessages(history);
       savedMessageIds.current.clear();
       history.forEach(m => savedMessageIds.current.add(m.id));
+      setIsLoadingMessages(false);
+      setHistoryRevealKey(k => k + 1);
+      // Scroll to bottom after history is revealed
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+      }, 50);
+      onMessagesLoadedRef.current?.();
     }
     loadHistory();
   }, [externalChatId]);
@@ -65,7 +84,7 @@ export default function ChatWindow({
       onError: (error) => {
         notification.error({
           message: "Lỗi kết nối",
-          description: "Có lỗi xảy ra khi trò chuyện với Cô Minh. Trò thử kiểm tra lại mạng hoặc API key xem sao nhé! 😅",
+          description: "Có lỗi xảy ra khi trò chuyện với Cô Minh. Trò thử kiểm tra lại mạng xem sao nhé! 😅",
           placement: "topRight",
           duration: 4,
         });
@@ -92,6 +111,13 @@ export default function ChatWindow({
       inputRef.current?.focus();
     }
   }, [isLoading]);
+
+  // Focus input when a new chat is selected or created
+  useEffect(() => {
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  }, [externalChatId]);
 
   // Sync user messages to Supabase
   useEffect(() => {
@@ -161,30 +187,58 @@ export default function ChatWindow({
 
       {/* Messages */}
       <div className="chat-messages" ref={scrollContainerRef}>
-        {messages.length === 0 && (
-          <div className="chat-empty">
-            <div className="chat-empty-emoji">👩‍🏫</div>
-            <Text className="chat-empty-title">Chào mừng đến lớp học của Cô Minh!</Text>
-            <Text className="chat-empty-desc">
-              Hãy bắt đầu bằng cách nhập một câu tiếng Anh — cô sẽ sửa và giúp bạn luyện tập ngay! 😄
-            </Text>
+        {isLoadingMessages ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px 16px' }}>
+            {[1, 2, 3].map(i => (
+              <div key={i} className={`message-row ${i % 2 === 0 ? 'message-row--user' : 'message-row--ai'}`}>
+                <div className={`message-avatar ${i % 2 === 0 ? 'message-avatar--user' : 'message-avatar--ai'}`}>
+                  {i % 2 === 0 ? '🧑' : '👩‍🏫'}
+                </div>
+                <div 
+                  className={`message-bubble ${i % 2 === 0 ? 'message-bubble--user' : 'message-bubble--ai'}`}
+                  style={{ opacity: 0.4, minWidth: `${60 + i * 20}px`, minHeight: 36, animation: 'pulse 1.5s ease-in-out infinite' }}
+                />
+              </div>
+            ))}
           </div>
+        ) : (
+          <>
+            {messages.length === 0 && (
+              <div className="chat-empty">
+                <div className="chat-empty-emoji">👩‍🏫</div>
+                <Text className="chat-empty-title">Chào mừng đến lớp học của Cô Minh!</Text>
+                <Text className="chat-empty-desc">
+                  Hãy bắt đầu bằng cách nhập một câu tiếng Anh — cô sẽ sửa và giúp bạn luyện tập ngay! 😄
+                </Text>
+              </div>
+            )}
+
+            {/* Historical messages: fade the whole batch in at once (no per-row bounce) */}
+            {initialMessages.length > 0 && (
+              <div key={historyRevealKey} className="chat-history-batch">
+                {messages.filter(m => initialMessages.some(im => im.id === m.id)).map((message) => (
+                  <MessageItem key={message.id} message={message} />
+                ))}
+              </div>
+            )}
+
+            {/* New messages: use the per-row bounce animation */}
+            {messages.filter(m => !initialMessages.some(im => im.id === m.id)).map((message) => (
+              <MessageItem key={message.id} message={message} />
+            ))}
+
+            {isLoading && (
+              <div className="message-row message-row--ai">
+                <div className="message-avatar message-avatar--ai">👩‍🏫</div>
+                <div className="message-bubble message-bubble--ai typing-indicator">
+                  <span /><span /><span />
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </>
         )}
-
-        {messages.map((message) => (
-          <MessageItem key={message.id} message={message} />
-        ))}
-
-        {isLoading && (
-          <div className="message-row message-row--ai">
-            <div className="message-avatar message-avatar--ai">👩‍🏫</div>
-            <div className="message-bubble message-bubble--ai typing-indicator">
-              <span /><span /><span />
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}

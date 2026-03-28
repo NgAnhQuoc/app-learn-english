@@ -8,26 +8,23 @@ import { createChatSession } from "../../../utils/supabase/chat";
 import { Drawer } from "antd";
 
 export default function CoMinhEnglishPage(): React.ReactElement {
-  const [level, setLevel] = useState("A2 (Pre-Intermediate)");
-  const [weakness, setWeakness] = useState("");
+  const [level, setLevel] = useState(() => 
+    typeof window !== "undefined" ? (localStorage.getItem("co_minh_level") ?? "A2 (Pre-Intermediate)") : "A2 (Pre-Intermediate)"
+  );
+  const [weakness, setWeakness] = useState(() => 
+    typeof window !== "undefined" ? (localStorage.getItem("co_minh_weakness") ?? "") : ""
+  );
   
   // Chat History States
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("co_minh_chat_id") : null
+  );
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [loadingChatId, setLoadingChatId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const savedLevel = localStorage.getItem("co_minh_level");
-    const savedWeakness = localStorage.getItem("co_minh_weakness");
-    const savedChatId = localStorage.getItem("co_minh_chat_id");
-    
-    setTimeout(() => {
-      if (savedLevel) setLevel(savedLevel);
-      if (savedWeakness) setWeakness(savedWeakness);
-      if (savedChatId) setCurrentChatId(savedChatId);
-    }, 0);
-  }, []);
+
 
   // Keep in sync when sidebar changes (via storage event)
   useEffect(() => {
@@ -46,8 +43,13 @@ export default function CoMinhEnglishPage(): React.ReactElement {
     setCurrentChatId(newId);
     if (newId) {
       localStorage.setItem("co_minh_chat_id", newId);
+      // Only show loading if switching to a different chat
+      if (newId !== currentChatId) {
+        setLoadingChatId(newId);
+      }
     } else {
       localStorage.removeItem("co_minh_chat_id");
+      setLoadingChatId(null);
     }
     setMobileDrawerOpen(false);
   };
@@ -83,6 +85,7 @@ export default function CoMinhEnglishPage(): React.ReactElement {
     }, 500);
   };
 
+
   return (
     <div className="vocab-split-page">
       <div style={{ display: "flex", height: "100%", width: "100%", maxWidth: "1400px", overflow: "hidden", margin: "0 auto" }}>
@@ -96,6 +99,7 @@ export default function CoMinhEnglishPage(): React.ReactElement {
             onClearChat={handleClearChat}
             refreshTrigger={refreshTrigger}
             isCreatingChat={isCreatingChat}
+            loadingChatId={loadingChatId}
           />
         </div>
 
@@ -116,6 +120,7 @@ export default function CoMinhEnglishPage(): React.ReactElement {
             onClearChat={handleClearChat}
             refreshTrigger={refreshTrigger}
             isCreatingChat={isCreatingChat}
+            loadingChatId={loadingChatId}
           />
         </Drawer>
         
@@ -127,6 +132,7 @@ export default function CoMinhEnglishPage(): React.ReactElement {
             onChatCreated={handleSelectChat}
             onChatTitleUpdated={handleTitleUpdated}
             onOpenMobileSidebar={() => setMobileDrawerOpen(true)}
+            onMessagesLoaded={() => setLoadingChatId(null)}
           />
         </div>
       </div>

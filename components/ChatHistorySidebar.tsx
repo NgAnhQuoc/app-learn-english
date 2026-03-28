@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Typography, Spin, Popconfirm, Empty, Tooltip, Button } from "antd";
+import { Typography, Spin, Popconfirm, Empty, Button } from "antd";
 import { MessageOutlined, DeleteOutlined, PlusOutlined, LoadingOutlined } from "@ant-design/icons";
 import { ChatSession, fetchChatSessions, deleteChatSession, deleteAllChatSessions } from "../utils/supabase/chat";
 
@@ -12,9 +12,10 @@ interface ChatHistorySidebarProps {
   onClearChat: () => void;
   refreshTrigger: number;
   isCreatingChat: boolean;
+  loadingChatId?: string | null;
 }
 
-export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewChat, onClearChat, refreshTrigger, isCreatingChat }: ChatHistorySidebarProps) {
+export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewChat, onClearChat, refreshTrigger, isCreatingChat, loadingChatId }: ChatHistorySidebarProps) {
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -100,26 +101,30 @@ export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewC
             >
               <div className="chat-history-content">
                 <MessageOutlined className="chat-icon" />
-                <Tooltip title={chat.title || "Đoạn chat mới"}>
-                  <Text className="chat-title">
-                    {chat.title || "Đoạn chat mới"}
-                  </Text>
-                </Tooltip>
+                <Text className="chat-title">
+                  {chat.title || "Đoạn chat mới"}
+                </Text>
               </div>
 
-              <Popconfirm
-                title="Xóa đoạn chat này?"
-                description="Bạn chắc chắn muốn xóa?"
-                onConfirm={(e) => handleDelete(e as React.MouseEvent, chat.id)}
-                onCancel={(e) => e?.stopPropagation()}
-                okText="Xóa"
-                cancelText="Hủy"
-                placement="right"
-              >
-                <div className="chat-delete-btn" onClick={(e) => e.stopPropagation()}>
-                  <DeleteOutlined />
-                </div>
-              </Popconfirm>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {loadingChatId === chat.id ? (
+                  <LoadingOutlined style={{ color: 'var(--accent)', fontSize: 13 }} spin />
+                ) : (
+                  <Popconfirm
+                    title="Xóa đoạn chat này?"
+                    description="Bạn chắc chắn muốn xóa?"
+                    onConfirm={(e) => handleDelete(e as React.MouseEvent, chat.id)}
+                    onCancel={(e) => e?.stopPropagation()}
+                    okText="Xóa"
+                    cancelText="Hủy"
+                    placement="right"
+                  >
+                    <div className="chat-delete-btn" onClick={(e) => e.stopPropagation()}>
+                      <DeleteOutlined />
+                    </div>
+                  </Popconfirm>
+                )}
+              </div>
             </div>
           ))
         )}

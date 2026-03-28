@@ -8,7 +8,7 @@ export async function authenticate(account: string, pass: string) {
   
   if (account.trim() === envAccount && pass.trim() === envPassword) {
     const cookieStore = await cookies();
-    cookieStore.set("co_minh_auth", "authenticated", {
+    cookieStore.set("auth_app_token", "authenticated", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 24 * 7, // 1 week
@@ -21,5 +21,5 @@ export async function authenticate(account: string, pass: string) {
 
 export async function logout() {
   const cookieStore = await cookies();
-  cookieStore.delete("co_minh_auth");
+  cookieStore.delete("auth_app_token");
 }

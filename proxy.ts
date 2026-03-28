@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export default function proxy(request: NextRequest) {
-  const isAuth = request.cookies.has('co_minh_auth');
+  const isAuth = request.cookies.has('auth_app_token');
   const path = request.nextUrl.pathname;
   
   // Skip static files, Next.js internal routes, and explicitly allowed API endpoints
