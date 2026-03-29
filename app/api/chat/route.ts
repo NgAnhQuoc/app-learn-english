@@ -1,3 +1,6 @@
+import { streamText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
 export async function POST(req: Request) {
   const { messages, level, weakness } = await req.json();
 
@@ -28,75 +31,14 @@ Use genuine pedagogical judgment:
 - When in doubt, prioritize a smooth conversation over being a grammar police. Never invent errors that aren't there.
 Never let the correction overshadow the conversation.`;
 
-  const openaiRes = await fetch(`${process.env.OPENAI_API_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-      stream: true,
-      messages: [
-        { role: "system", content: dynamicSystemPrompt },
-        ...messages.slice(-20),
-      ],
-    }),
+  const result = await streamText({
+    model: openai(process.env.OPENAI_MODEL ?? "gpt-4o-mini"),
+    system: dynamicSystemPrompt,
+    messages: messages.slice(-20),
   });
 
-  if (!openaiRes.ok || !openaiRes.body) {
-    return new Response("OpenAI API error", { status: openaiRes.status });
-  }
+  return result.toDataStreamResponse();
 
-  // Re-encode OpenAI SSE stream → Vercel AI SDK Data Stream Protocol
-  // so that useChat() on the client continues to work unchanged.
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      const reader = openaiRes.body!.getReader();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") {
-            // Signal end of stream
-            controller.enqueue(encoder.encode("d:{\"finishReason\":\"stop\"}\n"));
-            continue;
-          }
-          try {
-            const parsed = JSON.parse(data);
-            const text = parsed.choices?.[0]?.delta?.content;
-            if (text) {
-              // Vercel AI Data Stream Protocol: 0:"chunk"\n
-              controller.enqueue(
-                encoder.encode(`0:${JSON.stringify(text)}\n`)
-              );
-            }
-          } catch {
-            // ignore malformed chunks
-          }
-        }
-      }
-
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "X-Vercel-AI-Data-Stream": "v1",
-    },
-  });
 }
+

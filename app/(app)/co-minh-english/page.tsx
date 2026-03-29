@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import ChatWindow from "../../../components/ChatWindow";
 import ChatHistorySidebar from "../../../components/ChatHistorySidebar";
+import SettingsWidget from "../../../components/SettingsWidget";
 import { createChatSession } from "../../../utils/supabase/chat";
-
 import { Drawer } from "antd";
 
 export default function CoMinhEnglishPage(): React.ReactElement {
@@ -14,6 +14,17 @@ export default function CoMinhEnglishPage(): React.ReactElement {
   const [weakness, setWeakness] = useState(() => 
     typeof window !== "undefined" ? (localStorage.getItem("co_minh_weakness") ?? "") : ""
   );
+
+  const handleLevelChange = (val: string) => {
+    setLevel(val);
+    localStorage.setItem("co_minh_level", val);
+  };
+
+  const handleWeaknessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setWeakness(val);
+    localStorage.setItem("co_minh_weakness", val);
+  };
   
   // Chat History States
   const [currentChatId, setCurrentChatId] = useState<string | null>(() =>
@@ -136,6 +147,14 @@ export default function CoMinhEnglishPage(): React.ReactElement {
           />
         </div>
       </div>
+
+      {/* Settings widget — chỉ hiển thị ở trang Cô Minh English */}
+      <SettingsWidget
+        level={level}
+        weakness={weakness}
+        onLevelChange={handleLevelChange}
+        onWeaknessChange={handleWeaknessChange}
+      />
     </div>
   );
 }

@@ -105,6 +105,13 @@ body {
   max-height: 100dvh !important;
   background: var(--bg-base) !important;
   overflow: hidden !important;
+
+  @media (max-width: 640px) {
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    min-height: 100dvh;
+  }
 }
 
 // ─────────────────────────────────────────
@@ -1028,6 +1035,7 @@ body {
 }
 
 
+
 // ── Left panel — centering wrapper ─────────
 .vocab-left-panel {
   display: flex;
@@ -1147,6 +1155,7 @@ body {
   }
 }
 
+
 .vocab-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60%; gap: 10px; text-align: center; }
 .vocab-empty-icon { font-size: 52px; }
 
@@ -1180,6 +1189,37 @@ body {
 .vocab-meaning-tabs { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
 .vocab-meaning-badge { background: #16a34a; color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 3px; letter-spacing: 0.3px; }
 .vocab-meaning-text { font-size: 14px !important; color: var(--text-primary) !important; line-height: 1.7 !important; margin: 0 !important; flex: 1; }
+
+.vocab-lang-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.vocab-lang-btn {
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.18s ease;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  &.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+  }
+}
+
 
 .vocab-speak-btn { background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.25); color: #818cf8; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; font-size: 13px; flex-shrink: 0; &:hover { background: rgba(99,102,241,0.25); transform: scale(1.1); } &.vocab-speak-sm { width: 26px; height: 26px; font-size: 12px; } }
 
@@ -1216,38 +1256,44 @@ body {
   }
 }
 
-// ── Mobile: stacked layout ──────────────────
+// ── Mobile: stacked layout (full-page scroll) ──
 @media (max-width: 640px) {
+  .vocab-split-page {
+    height: auto !important;
+    min-height: 100%;
+    overflow: visible !important;
+  }
+
   .vocab-content-wrap,
   .vocab-content-wrap--searched {
     grid-template-columns: 1fr !important;
-    grid-template-rows: auto 1fr;
-    overflow-y: auto;
+    grid-template-rows: auto auto;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  // Left panel becomes a top bar on mobile
+  // Left panel: natural height
   .vocab-left-panel,
   .vocab-left-panel--compact {
+    height: auto !important;
     align-items: stretch !important;
     justify-content: flex-start !important;
     border-right: none !important;
     border-bottom: 1px solid var(--border);
-    overflow-y: visible !important;
-    max-height: none;
+    overflow: visible !important;
   }
 
-  // Inner form: full width on mobile
   .vocab-left-inner {
     max-width: none !important;
     padding: 16px !important;
   }
 
-  // Hero intro hides on mobile after search
   .vocab-hero-intro { display: none; }
 
-  // Right panel: always visible (stacked below)
+  // Right panel: natural height, always visible
   .vocab-right-panel {
-    overflow-y: visible;
+    height: auto !important;
+    overflow: visible !important;
     padding: 16px !important;
     opacity: 1 !important;
     pointer-events: all !important;
@@ -1256,6 +1302,7 @@ body {
   .vocab-word { font-size: 26px; }
   .vocab-bottom-row { grid-template-columns: 1fr; }
 }
+
 
 
 // ── Tips block ─────────────────────────────
@@ -1414,7 +1461,7 @@ body {
 
 .settings-widget {
   position: fixed;
-  bottom: 24px;
+  bottom: 80px;
   right: 24px;
   z-index: 1000;
   display: flex;
@@ -1679,4 +1726,46 @@ ol {
   .chat-sidebar-desktop {
     display: none !important;
   }
+}
+
+.vocab-example-item {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  border-radius: 12px;
+
+  & + & {
+    margin-top: 10px;
+  }
+}
+
+.vocab-example-num {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  color: #0a0a0a;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.vocab-example-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.message-text ul {
+    padding-left: 20px;
 }
