@@ -138,7 +138,7 @@ export default function SearchPanel({
 
       {history.length > 0 && (
         <>
-          <div className="vocab-section-label" style={{ marginTop: 16 }}>
+          <div className="vocab-section-label mt-4">
             <HistoryOutlined style={{ marginRight: 5 }} />Đã tra gần đây ({history.length}/8)
           </div>
           <div className="vocab-hints">

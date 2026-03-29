@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { message } from "antd";
+import React, { useState, useEffect, useRef } from "react";
+
 import type { VocabularyResult } from "../../api/vocabulary/route";
 import SearchPanel from "./components/SearchPanel";
 import VocabResultPanel from "./components/VocabResultPanel";
 import { fetchVocabularyHistory, upsertVocabularyHistory } from "../../../utils/supabase/vocabulary";
 
-const isEnglishOnly = (text: string) => /^[a-zA-Z\s'\-]+$/.test(text.trim());
+
 
 export default function CoLanhVocabularyPage(): React.ReactElement {
   const [query, setQuery] = useState("");
@@ -16,7 +16,9 @@ export default function CoLanhVocabularyPage(): React.ReactElement {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
-  const [messageApi, contextHolder] = message.useMessage();
+  const searchLock = useRef(false);
+  const lastSearchedRef = useRef("");
+
 
   useEffect(() => {
     let isMounted = true;
@@ -33,14 +35,17 @@ export default function CoLanhVocabularyPage(): React.ReactElement {
   const doSearch = async (word: string) => {
     const trimmed = word.trim();
     if (!trimmed) return;
-    if (!isEnglishOnly(trimmed)) {
-      setQueryError("Chỉ nhập từ tiếng Anh nhé!");
-      return;
-    }
+    if (searchLock.current) return;
+    
+    // Nếu từ đang hiển thị y hệt từ vừa nhập thì đừng fetch lại tốn tiền API
+    if (lastSearchedRef.current === trimmed.toLowerCase()) return;
+
+    searchLock.current = true;
     setQueryError("");
     setHasSearched(true);
     setLoading(true);
     setResult(null);
+
     try {
       const res = await fetch("/api/vocabulary", {
         method: "POST",
@@ -48,20 +53,31 @@ export default function CoLanhVocabularyPage(): React.ReactElement {
         body: JSON.stringify({ word: trimmed }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Lỗi không xác định");
+      if (!res.ok) {
+        // API trả về lỗi (từ không phải tiếng Anh, hoặc lỗi khác)
+        // Hiện lỗi ngay trong panel tìm kiếm thay vì toast
+        setQueryError(data.error ?? "Không tìm thấy từ này!");
+        return;
+      }
       setResult(data as VocabularyResult);
-      
+
       // Update UI optimistically
       setHistory((prev) => [trimmed, ...prev.filter((h) => h !== trimmed)].slice(0, 8));
-      
+
       // Save to Supabase in the background
       upsertVocabularyHistory(trimmed).catch(console.error);
-    } catch (err: unknown) {
-      messageApi.error(err instanceof Error ? err.message : "Có lỗi xảy ra!");
+
+      // Đánh dấu từ này đã tra thành công
+      lastSearchedRef.current = trimmed.toLowerCase();
+    } catch {
+      setQueryError("Có lỗi xảy ra, thử lại nhé!");
+      lastSearchedRef.current = ""; // Reset để cho phép thử lại
     } finally {
       setLoading(false);
+      searchLock.current = false;
     }
   };
+
 
   const handleWordClick = (word: string) => {
     setQuery(word);
@@ -70,7 +86,6 @@ export default function CoLanhVocabularyPage(): React.ReactElement {
 
   return (
     <div className="vocab-split-page">
-      {contextHolder}
       <div className={`vocab-content-wrap${hasSearched ? " vocab-content-wrap--searched" : ""}`}>
 
         {/* ── LEFT PANEL ── */}

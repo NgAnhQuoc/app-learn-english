@@ -1,5 +1,8 @@
 import { Providers } from "../components/Providers";
+import "./tailwind-built.css";
 import "./globals.scss";
+
+
 
 export const metadata = {
   title: "AI English Teacher",

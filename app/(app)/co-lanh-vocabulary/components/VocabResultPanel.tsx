@@ -5,7 +5,7 @@ import { Card, Tag, Typography, Skeleton, Descriptions, Tooltip } from "antd";
 import { SoundOutlined, BookOutlined, BulbOutlined } from "@ant-design/icons";
 import type { VocabularyResult } from "../../../api/vocabulary/route";
 
-const { Text, Paragraph } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const levelColors: Record<string, string> = {
   "Dễ": "#52c41a",
@@ -145,7 +145,7 @@ export default function VocabResultPanel({
 
           {/* Summary card skeleton */}
           <Card className="vocab-card vocab-summary-card">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
               {[140, 100, 130, 80].map((w, i) => (
                 <Skeleton.Input key={i} active style={{ width: w, height: 16, borderRadius: 4 }} />
               ))}
@@ -156,14 +156,23 @@ export default function VocabResultPanel({
       )}
 
 
-      {!loading && !result && hasSearched && (
-        <div className="vocab-empty">
-          <div className="vocab-empty-icon">😅</div>
-          <Text style={{ color: "var(--text-muted)" }}>Cô Lành đang xử lý... hoặc từ này lạ quá!</Text>
+      {!loading && (!result || !result.found) && hasSearched && (
+        <div className="vocab-not-found">
+          <div className="vocab-not-found-icon">🔍</div>
+          <Title level={4} className="vocab-not-found-title">Không tìm thấy kết quả</Title>
+          <Text className="vocab-not-found-desc whitespace-nowrap">
+            Vui lòng kiểm tra lại từ vựng bạn đã nhập
+          </Text>
+          <div className="vocab-not-found-tips">
+            <span>✓ Chỉ nhập từ tiếng Anh</span>
+            <span>✓ Kiểm tra chính tả</span>
+            <span>✓ Thử từ đơn giản hơn</span>
+          </div>
         </div>
       )}
 
-      {!loading && result && (
+
+      {!loading && result?.found && (
         <div className="vocab-result">
 
           {/* Hero card */}
@@ -176,9 +185,9 @@ export default function VocabResultPanel({
                 </div>
                 {result.meanings && result.meanings.length > 0 && (
                   <div className="vocab-meanings-group">
-                    {result.meanings.map((m, i) => (
+                    {(result.meanings || []).map((m, i) => (
                       <div key={i} className="vocab-meaning-row">
-                        {result.meanings.length > 1 && (
+                        {(result.meanings || []).length > 1 && (
                           <span className="vocab-meaning-pos">{m.pos}.</span>
                         )}
                         <span className="vocab-meaning-translations">{m.translations.join(", ")}</span>
@@ -190,19 +199,19 @@ export default function VocabResultPanel({
                   <span className="vocab-phonetic-label">US</span>
                   <span className="vocab-phonetic">{result.phonetic}</span>
                   <Tooltip title="Nghe phát âm">
-                    <button className="vocab-speak-btn" onClick={() => speak(result.word)} aria-label="Phát âm">
+                    <button className="vocab-speak-btn" onClick={() => speak(result.word || "")} aria-label="Phát âm">
                       <SoundOutlined />
                     </button>
                   </Tooltip>
                 </div>
               </div>
-              <div className="vocab-level-badge" style={{ borderColor: levelColors[result.level], color: levelColors[result.level] }}>
-                {levelEmoji[result.level]} {result.level}
+              <div className="vocab-level-badge" style={{ borderColor: levelColors[result.level || "Dễ"], color: levelColors[result.level || "Dễ"] }}>
+                {levelEmoji[result.level || "Dễ"]} {result.level}
               </div>
             </div>
             <div className="vocab-meaning-block">
-              <div className="vocab-meaning-label" style={{ justifyContent: "space-between" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div className="vocab-meaning-label justify-between">
+                <span className="flex items-center gap-1.5">
                   <BookOutlined /> Giải thích (theo Cô Lành)
                 </span>
                 <div className="vocab-lang-toggle">
@@ -228,14 +237,14 @@ export default function VocabResultPanel({
           <Card className="vocab-card vocab-example-card">
             <div className="vocab-card-header"><BulbOutlined /> Ví dụ minh hoạ</div>
             <div className="vocab-example-block">
-              {result.examples.map((ex, i) => (
+              {(result.examples || []).map((ex, i) => (
                 <div key={i} className="vocab-example-item">
                   {/* Number badge */}
                   <span className="vocab-example-num">{i + 1}</span>
                   <div className="vocab-example-content">
                     {/* EN row */}
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                      <Text className="vocab-example-text" style={{ flex: 1 }}>{ex.sentence}</Text>
+                    <div className="flex items-start gap-2">
+                      <Text className="vocab-example-text flex-1">{ex.sentence}</Text>
                       <Tooltip title="Nghe câu ví dụ">
                         <button className="vocab-speak-btn vocab-speak-sm" onClick={() => speak(ex.sentence)} aria-label="Nghe câu">
                           <SoundOutlined />
@@ -243,7 +252,7 @@ export default function VocabResultPanel({
                       </Tooltip>
                     </div>
                     {/* VI row */}
-                    <Text className="vocab-example-vi-text" style={{ marginTop: 4, display: "block" }}>
+                    <Text className="vocab-example-vi-text mt-1 block">
                       {ex.translation}
                     </Text>
                   </div>
@@ -257,7 +266,7 @@ export default function VocabResultPanel({
             <Card className="vocab-card vocab-grammar-card">
               <div className="vocab-card-header">📝 Lưu ý ngữ pháp</div>
               <ul className="vocab-grammar-list">
-                {result.grammarNotes.map((note, i) => (
+                {(result.grammarNotes || []).map((note, i) => (
                   <li key={i} className="vocab-grammar-item">
                     <span className="vocab-grammar-num">{i + 1}</span>
                     <Text className="vocab-grammar-text">{note}</Text>
@@ -299,7 +308,7 @@ export default function VocabResultPanel({
               { key: "word", label: "Từ", children: <strong>{result.word}</strong> },
               { key: "pos", label: "Từ loại", children: result.partOfSpeech },
               { key: "phonetic", label: "Phiên âm", children: result.phonetic },
-              { key: "level", label: "Độ khó", children: <Tag color={levelColors[result.level]}>{result.level}</Tag> },
+              { key: "level", label: "Độ khó", children: <Tag color={levelColors[result.level || "Dễ"]}>{result.level}</Tag> },
             ]} />
           </Card>
         </div>

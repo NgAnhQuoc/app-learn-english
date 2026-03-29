@@ -165,8 +165,8 @@ export default function ChatWindow({
   return (
     <div className="chat-window" style={{ height: "100%" }}>
       {/* Header */}
-      <div className="chat-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="chat-header-info" style={{ display: 'flex', alignItems: 'center' }}>
+      <div className="chat-header">
+        <div className="chat-header-info">
           <Button 
             type="text" 
             icon={<MenuOutlined />} 
@@ -188,7 +188,7 @@ export default function ChatWindow({
       {/* Messages */}
       <div className="chat-messages" ref={scrollContainerRef}>
         {isLoadingMessages ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px 16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px 16px' }}>
             {[1, 2, 3].map(i => (
               <div key={i} className={`message-row ${i % 2 === 0 ? 'message-row--user' : 'message-row--ai'}`}>
                 <div className={`message-avatar ${i % 2 === 0 ? 'message-avatar--user' : 'message-avatar--ai'}`}>
@@ -200,7 +200,7 @@ export default function ChatWindow({
                 />
               </div>
             ))}
-          </div>
+        </div>
         ) : (
           <>
             {messages.length === 0 && (

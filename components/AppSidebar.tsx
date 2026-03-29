@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { App, Layout, Menu, Typography, Button } from "antd";
-import { MessageOutlined, BookOutlined, EditOutlined, LogoutOutlined } from "@ant-design/icons";
+import { MessageOutlined, BookOutlined, LogoutOutlined } from "@ant-design/icons";
 import { logout } from "../app/login/actions";
 
 interface AppSidebarProps {
@@ -54,13 +54,14 @@ export default function AppSidebar({ collapsed, onCollapse }: AppSidebarProps): 
       onCollapse={onCollapse}
       style={{ display: "flex", flexDirection: "column" }}
     >
-      <div style={{ padding: "20px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div className="flex items-center justify-between px-4 py-5"
+        style={{ borderBottom: "1px solid var(--border)" }}>
         <Typography.Title level={4} style={{ margin: 0, color: "var(--accent)" }}>
           📚 English App
         </Typography.Title>
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+      <div className="flex flex-col flex-1 justify-between">
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}
@@ -69,14 +70,14 @@ export default function AppSidebar({ collapsed, onCollapse }: AppSidebarProps): 
           items={menuItems}
         />
         
-        <div style={{ padding: "16px", borderTop: "1px solid var(--border)" }}>
+        <div className="p-4" style={{ borderTop: "1px solid var(--border)" }}>
           <Button 
             type="text" 
             danger 
             icon={<LogoutOutlined />} 
             onClick={handleLogout}
             loading={loggingOut}
-            style={{ width: "100%", textAlign: "left", justifyContent: "flex-start" }}
+            className="!w-full !text-left !justify-start"
           >
             Đăng xuất
           </Button>
