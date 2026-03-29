@@ -411,6 +411,8 @@ body {
   white-space: pre-wrap;
   font-size: 15px;
   line-height: 1.4;
+  display: flex;
+  flex-direction: column;
 }
 
 // ── Typing Indicator ──────────────────────
