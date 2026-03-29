@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Layout, Menu, Typography, Button } from "antd";
+import { App, Layout, Menu, Typography, Button } from "antd";
 import { MessageOutlined, BookOutlined, EditOutlined, LogoutOutlined } from "@ant-design/icons";
 import { logout } from "../app/login/actions";
 
@@ -14,13 +14,13 @@ interface AppSidebarProps {
 const menuItems = [
   { key: "/co-minh-english", icon: <MessageOutlined />, label: "Cô Minh English" },
   { key: "/co-lanh-vocabulary", icon: <BookOutlined />, label: "Từ điển Cô Lành" },
-  // { key: "/writing", icon: <EditOutlined />, label: "Bài tập Viết (Sắp ra mắt)", disabled: true },
 ];
 
 export default function AppSidebar({ collapsed, onCollapse }: AppSidebarProps): React.ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const [loggingOut, setLoggingOut] = useState(false);
+  const { modal } = App.useApp();
 
   const selectedKey = menuItems.find((item) => pathname.endsWith(item.key))?.key ?? "/co-minh-english";
 
@@ -28,10 +28,19 @@ export default function AppSidebar({ collapsed, onCollapse }: AppSidebarProps): 
     router.push(key);
   };
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    await logout();
-    window.location.href = "/login";
+  const handleLogout = () => {
+    modal.confirm({
+      title: "Đăng xuất",
+      content: "Bạn có chắc muốn đăng xuất không?",
+      okText: "Đăng xuất",
+      cancelText: "Huỷ",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setLoggingOut(true);
+        await logout();
+        window.location.href = "/login";
+      },
+    });
   };
 
   return (
