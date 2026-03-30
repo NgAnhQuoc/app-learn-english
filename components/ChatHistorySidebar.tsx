@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Typography, Spin, Popconfirm, Empty, Button } from "antd";
 import { MessageOutlined, DeleteOutlined, PlusOutlined, LoadingOutlined } from "@ant-design/icons";
-import { ChatSession, fetchChatSessions, deleteChatSession, deleteAllChatSessions } from "../utils/supabase/chat";
+import { ChatSession, fetchChatSessions, deleteChatSession, deleteAllChatSessions, ChatNamespace } from "../utils/supabase/chat";
 
 const { Text } = Typography;
 
@@ -13,9 +13,10 @@ interface ChatHistorySidebarProps {
   refreshTrigger: number;
   isCreatingChat: boolean;
   loadingChatId?: string | null;
+  namespace?: ChatNamespace;
 }
 
-export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewChat, onClearChat, refreshTrigger, isCreatingChat, loadingChatId }: ChatHistorySidebarProps) {
+export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewChat, onClearChat, refreshTrigger, isCreatingChat, loadingChatId, namespace = "cominh" }: ChatHistorySidebarProps) {
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +28,7 @@ export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewC
       if (isFirstLoad.current) {
         setLoading(true);
       }
-      const data = await fetchChatSessions();
+      const data = await fetchChatSessions(namespace);
       if (isMounted) {
         setChats(data);
         setLoading(false);
@@ -40,7 +41,7 @@ export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewC
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    const success = await deleteChatSession(id);
+    const success = await deleteChatSession(id, namespace);
     if (success) {
       setChats(prev => prev.filter(c => c.id !== id));
       if (currentChatId === id) {
@@ -50,7 +51,7 @@ export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewC
   };
 
   const handleDeleteAll = async () => {
-    const success = await deleteAllChatSessions();
+    const success = await deleteAllChatSessions(namespace);
     if (success) {
       setChats([]);
       onClearChat();

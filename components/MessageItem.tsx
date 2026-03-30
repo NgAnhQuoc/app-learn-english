@@ -14,6 +14,12 @@ interface MessageItemProps {
 function MessageItem({ message }: MessageItemProps) {
   const isUser = message.role === "user";
 
+  // Không render bong bóng chat nếu nội dung rỗng (như khi AI gọi tool ngầm)
+  if (!message.content || message.content.trim() === "") {
+    // Có thể check toolInvocations nếu muốn báo "Đang cào dữ liệu..." nhưng hiện tại ẩn luôn cho đẹp
+    return null;
+  }
+
   return (
     <div className={`message-row ${isUser ? "message-row--user" : "message-row--ai"}`}>
       {!isUser && (
