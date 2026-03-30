@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { App, Layout, Menu, Typography, Button } from "antd";
-import { MessageOutlined, BookOutlined, LogoutOutlined } from "@ant-design/icons";
+import { MessageOutlined, BookOutlined, LogoutOutlined, CarOutlined } from "@ant-design/icons";
 import { logout } from "../app/login/actions";
 
 interface AppSidebarProps {
@@ -14,6 +14,7 @@ interface AppSidebarProps {
 const menuItems = [
   { key: "/co-minh-english", icon: <MessageOutlined />, label: "Cô Minh English" },
   { key: "/co-lanh-vocabulary", icon: <BookOutlined />, label: "Từ điển Cô Lành" },
+  { key: "/kieu-gia-xang", icon: <CarOutlined />, label: "Kiều Giá Xăng" },
 ];
 
 export default function AppSidebar({ collapsed, onCollapse }: AppSidebarProps): React.ReactElement {

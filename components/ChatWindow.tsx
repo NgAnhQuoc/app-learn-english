@@ -6,7 +6,7 @@ import { ArrowUpOutlined, MenuOutlined } from "@ant-design/icons";
 import { useEffect, useRef, useState } from "react";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import MessageItem from "./MessageItem";
-import { createChatSession, fetchChatMessages, saveMessage, updateChatTitle } from "../utils/supabase/chat";
+import { createChatSession, fetchChatMessages, saveMessage, updateChatTitle, ChatNamespace } from "../utils/supabase/chat";
 import { Message } from "ai";
 
 export default function ChatWindow({ 
@@ -17,6 +17,12 @@ export default function ChatWindow({
   onChatTitleUpdated,
   onOpenMobileSidebar,
   onMessagesLoaded,
+  apiEndpoint,
+  subtitle,
+  welcomeTitle,
+  welcomeMessage,
+  inputPlaceholder,
+  namespace = "cominh",
 }: { 
   level: string; 
   weakness: string; 
@@ -25,6 +31,12 @@ export default function ChatWindow({
   onChatTitleUpdated: () => void;
   onOpenMobileSidebar: () => void;
   onMessagesLoaded?: () => void;
+  apiEndpoint?: string;
+  subtitle?: string;
+  welcomeTitle?: React.ReactNode;
+  welcomeMessage?: React.ReactNode;
+  inputPlaceholder?: string;
+  namespace?: ChatNamespace;
 }) {
   const { notification } = App.useApp();
   const { Text } = Typography;
@@ -49,7 +61,7 @@ export default function ChatWindow({
       }
       setIsLoadingMessages(true);
       // Silently fetch UI without spinner flash
-      const history = await fetchChatMessages(externalChatId);
+      const history = await fetchChatMessages(externalChatId, namespace);
       setInitialMessages(history);
       savedMessageIds.current.clear();
       history.forEach(m => savedMessageIds.current.add(m.id));
@@ -68,7 +80,7 @@ export default function ChatWindow({
 
   const { messages, input, handleInputChange, handleSubmit, isLoading } =
     useChat({
-      api: "/api/chat",
+      api: apiEndpoint || "/api/chat",
       id: externalChatId || "default",
       initialMessages,
       body: {
@@ -77,7 +89,7 @@ export default function ChatWindow({
       },
       onFinish: async (message) => {
         if (externalChatId) {
-          await saveMessage(externalChatId, message);
+          await saveMessage(externalChatId, message, namespace);
           savedMessageIds.current.add(message.id);
         }
       },
@@ -126,7 +138,7 @@ export default function ChatWindow({
       const latestMessage = messages[messages.length - 1];
       if (latestMessage && latestMessage.role === "user" && !savedMessageIds.current.has(latestMessage.id)) {
         savedMessageIds.current.add(latestMessage.id);
-        await saveMessage(externalChatId, latestMessage);
+        await saveMessage(externalChatId, latestMessage, namespace);
       }
     }
     syncUserMessage();
@@ -139,15 +151,15 @@ export default function ChatWindow({
       const currentInput = input;
 
       if (!externalChatId) {
-        createChatSession().then(newId => {
+        createChatSession(namespace).then(newId => {
           if (newId) {
             onChatCreated(newId);
-            updateChatTitle(newId, currentInput.slice(0, 40)).then(() => onChatTitleUpdated());
+            updateChatTitle(newId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
           }
         });
       } else if (isFirstMessage) {
         // If the chat was created instantly but has no messages, update its title in background
-        updateChatTitle(externalChatId, currentInput.slice(0, 40)).then(() => onChatTitleUpdated());
+        updateChatTitle(externalChatId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
       }
       
       // Call handleSubmit synchronously to eliminate UI lag/double submit
@@ -179,7 +191,7 @@ export default function ChatWindow({
             <Text className="chat-header-name">Cô Minh</Text>
             <div className="chat-header-status">
               <span className="status-dot" />
-              <Text className="chat-header-sub">AI English Teacher • Online</Text>
+              <Text className="chat-header-sub">{subtitle || "AI English Teacher"} • Online</Text>
             </div>
           </div>
         </div>
@@ -206,9 +218,9 @@ export default function ChatWindow({
             {messages.length === 0 && (
               <div className="chat-empty">
                 <div className="chat-empty-emoji">👩‍🏫</div>
-                <Text className="chat-empty-title">Chào mừng đến lớp học của Cô Minh!</Text>
+                <Text className="chat-empty-title">{welcomeTitle || "Chào mừng đến lớp học của Cô Minh!"}</Text>
                 <Text className="chat-empty-desc">
-                  Hãy bắt đầu bằng cách nhập một câu tiếng Anh — cô sẽ sửa và giúp bạn luyện tập ngay! 😄
+                  {welcomeMessage || "Hãy bắt đầu bằng cách nhập một câu tiếng Anh — cô sẽ sửa và giúp bạn luyện tập ngay! 😄"}
                 </Text>
               </div>
             )}
@@ -249,7 +261,7 @@ export default function ChatWindow({
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Nhập câu tiếng Anh... (Enter gửi, Shift+Enter xuống dòng)"
+            placeholder={inputPlaceholder || "Nhập câu tiếng Anh... (Enter gửi, Shift+Enter xuống dòng)"}
             autoSize={{ minRows: 1, maxRows: 4 }}
             className="chat-input"
             disabled={isLoading}

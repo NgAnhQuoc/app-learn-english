@@ -20,6 +20,7 @@
     "@tailwindcss/postcss": "^4.2.2",
     "ai": "^3.4.33",
     "antd": "^5.24.5",
+    "cheerio": "^1.2.0",
     "next": "16.2.1",
     "openai": "^4.104.0",
     "react": "^19.0.0",
