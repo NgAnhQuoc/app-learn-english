@@ -61,6 +61,11 @@ Nếu found: true, điền đầy đủ:
 - antonyms: 1-2 từ trái nghĩa (nếu có)
 - level: phân loại độ khó của từ ("Dễ", "Trung bình", "Khó")
 
+QUY TẮC BẮT BUỘC:
+- examples[].sentence: chỉ được viết tiếng Anh, không chứa chữ cái tiếng Việt có dấu (ă â ê ô ơ ư đ).
+- examples[].translation: chỉ viết tiếng Việt.
+Nếu vi phạm → tự sửa lại trước khi trả kết quả.
+
 Nếu found: false, chỉ cần trả về found: false là đủ.`,
     });
 
