@@ -29,7 +29,7 @@ function speak(text: string): void {
   const setVoice = () => {
     const voices = window.speechSynthesis.getVoices();
     const enVoices = voices.filter((v) => v.lang.startsWith("en"));
-    const maleKeywords = ["male", "david", "daniel", "alex", "fred", "ralph", "albert", "thomas", "oliver", "aaron", "noel", "bruce", "bob"];
+    const maleKeywords = [ "david", "daniel", "alex", "fred", "ralph"];
     const maleVoice = enVoices.find((v) =>
       maleKeywords.some((kw) => v.name.toLowerCase().includes(kw))
     );

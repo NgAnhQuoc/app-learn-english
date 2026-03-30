@@ -15,8 +15,8 @@ const VocabularySchema = z.object({
   meaning: z.string().optional(),
   meaningEn: z.string().optional(),
   examples: z.array(z.object({
-    sentence: z.string(),
-    translation: z.string(),
+    sentence: z.string().describe("Câu ví dụ tiếng Anh"),
+    translation: z.string().describe("Bản dịch tiếng Việt của câu ví dụ"),
   })).optional(),
   grammarNotes: z.array(z.string()).optional(),
   level: z.enum(["Dễ", "Trung bình", "Khó"]).optional(),
@@ -55,10 +55,11 @@ Nếu found: true, điền đầy đủ:
 - meanings: nhóm theo từ loại, mỗi nhóm 2-3 nghĩa tiếng Việt
 - meaning: giải thích tiếng Việt phong cách hài hước Cô Lành (1-2 câu)
 - meaningEn: same humorous style in English
-- examples: ĐÚNG 2 câu ví dụ sáng tạo liên quan đời sống học sinh VN, kèm dịch tiếng Việt
+- examples: ĐÚNG 2 câu ví dụ tiếng Anh sáng tạo liên quan đời sống học sinh VN (trường sentence), kèm dịch tiếng Việt (trường translation)
 - grammarNotes: 2-4 lưu ý ngữ pháp
 - synonyms: 2-3 từ đồng nghĩa (nếu có)
 - antonyms: 1-2 từ trái nghĩa (nếu có)
+- level: phân loại độ khó của từ ("Dễ", "Trung bình", "Khó")
 
 Nếu found: false, chỉ cần trả về found: false là đủ.`,
     });
