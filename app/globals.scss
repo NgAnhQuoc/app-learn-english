@@ -398,9 +398,38 @@ $breakpoint-mobile: 768px;
 }
 
 .markdown-message {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  
   p {
-    margin-bottom: 8px !important;
-    &:last-child { margin-bottom: 0 !important; }
+    margin-bottom: 0 !important;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 8px 0;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+    }
+    th {
+      background: var(--bg-card-hover);
+      font-weight: 600;
+      color: var(--accent-light);
+    }
+    // Dành riêng cho bong bóng của user (nền sáng hơn)
+    tr {
+      background: rgba(0, 0, 0, 0.1);
+    }
   }
 }
 
@@ -1226,7 +1255,7 @@ $breakpoint-mobile: 768px;
 .vocab-word { font-size: 34px; font-weight: 800; color: var(--text-primary); letter-spacing: -1px; line-height: 1.1; }
 .vocab-pos-tag { background: rgba(99,102,241,0.2) !important; border-color: rgba(99,102,241,0.4) !important; color: #818cf8 !important; border-radius: 6px !important; font-size: 12px !important; font-style: italic; }
 .vocab-short-meanings { font-size: 16px; font-weight: 600; color: #4ade80; letter-spacing: 0.1px; line-height: 1.4; margin-bottom: 2px; }
-.vocab-phonetic-row { display: flex; align-items: center; gap: 8px; }
+.vocab-phonetic-row { display: flex; align-items: center; gap: 10px; }
 .vocab-phonetic-label { font-size: 10px; font-weight: 700; color: var(--text-muted); background: rgba(255,255,255,0.07); padding: 1px 6px; border-radius: 4px; }
 .vocab-phonetic { font-size: 15px; color: #818cf8; font-family: 'Courier New', monospace; letter-spacing: 1px; }
 .vocab-level-badge { border: 2px solid; border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
@@ -1267,7 +1296,35 @@ $breakpoint-mobile: 768px;
 }
 
 
-.vocab-speak-btn { background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.25); color: #818cf8; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; font-size: 13px; flex-shrink: 0; &:hover { background: rgba(99,102,241,0.25); transform: scale(1.1); } &.vocab-speak-sm { width: 26px; height: 26px; font-size: 12px; } }
+.vocab-speak-btn {
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.25);
+  color: #818cf8;
+  border-radius: 16px;
+  padding: 4px 10px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  flex-shrink: 0;
+  white-space: nowrap;
+
+  .vocab-phonetic-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #818cf8;
+    background: none;
+    padding: 0;
+    line-height: 1;
+  }
+
+  &:hover { background: rgba(99,102,241,0.25); transform: scale(1.05); }
+  &.vocab-speak-sm { padding: 2px 6px; height: 24px; font-size: 12px; border-radius: 50%; }
+}
 
 .vocab-example-block { display: flex; flex-direction: column; gap: 8px; }
 .vocab-example-en, .vocab-example-vi { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; }
@@ -1430,6 +1487,60 @@ $breakpoint-mobile: 768px;
   font-weight: 600;
   color: #4ade80;
   letter-spacing: 0.1px;
+}
+
+// ── Autocomplete wrapper & dropdown ─────────
+.vocab-input-autocomplete-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.vocab-suggest-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  z-index: 100;
+  padding: 4px;
+  animation: fadeIn 0.15s ease;
+}
+
+.vocab-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  text-align: left;
+
+  &:hover, &--active {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+  }
+
+  &--active {
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--accent);
+  }
+}
+
+.vocab-suggest-icon {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 // ── AutoComplete custom input ───────────────

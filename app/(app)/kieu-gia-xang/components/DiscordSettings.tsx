@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button, Modal, Switch, Input, Space, Popconfirm, Typography, Tooltip, Badge, App } from "antd";
-import { PlusOutlined, DeleteOutlined, SendOutlined, DiscordOutlined, SettingOutlined, LinkOutlined, NotificationOutlined, RobotOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined, SendOutlined, DiscordOutlined, SettingOutlined, LinkOutlined, NotificationOutlined, RobotOutlined, EditOutlined } from "@ant-design/icons";
 import { supabase } from "@/utils/supabase/client";
 
 interface DiscordWebhook {
@@ -22,9 +22,12 @@ export default function DiscordSettings() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newUrl, setNewUrl] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editUrl, setEditUrl] = useState("");
 
-  const fetchWebhooks = async () => {
-    setLoading(true);
+  const fetchWebhooks = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     const { data, error } = await supabase
       .from("discord_settings")
       .select("*")
@@ -37,7 +40,7 @@ export default function DiscordSettings() {
     } else {
       setWebhooks(data || []);
     }
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
   useEffect(() => {
@@ -45,15 +48,20 @@ export default function DiscordSettings() {
   }, [open]);
 
   const handleToggle = async (id: string, field: "is_active" | "auto_notify", value: boolean) => {
+    // Luôn luôn cập nhật UI ngay lập tức
+    setWebhooks(prev => prev.map(w => w.id === id ? { ...w, [field]: value } : w));
+
     const { error } = await supabase
       .from("discord_settings")
       .update({ [field]: value })
       .eq("id", id);
+      
     if (!error) {
       message.success("Cập nhật thành công!");
-      fetchWebhooks();
     } else {
-      message.error("Có lỗi xảy ra");
+      message.error("Có lỗi xảy ra, thử lại sau");
+      // Nếu lỗi thì gọi fetch lại ngầm (không loading spinner) để revert UI
+      fetchWebhooks(false);
     }
   };
 
@@ -86,6 +94,33 @@ export default function DiscordSettings() {
     }
   };
 
+  const handleUpdate = async () => {
+    if (!editingId) return;
+    if (!editName.trim() || !editUrl.trim()) {
+      message.error("Vui lòng nhập đủ tên và URL");
+      return;
+    }
+    const { error } = await supabase
+      .from("discord_settings")
+      .update({ name: editName, webhook_url: editUrl })
+      .eq("id", editingId);
+    
+    if (error) {
+      message.error(error.message);
+    } else {
+      message.success("Đã cập nhật kênh thành công!");
+      setEditingId(null);
+      fetchWebhooks(false); // Fetch ngầm để UI update ko bị chớp
+    }
+  };
+
+  const startEdit = (hook: DiscordWebhook) => {
+    setEditingId(hook.id);
+    setEditName(hook.name);
+    setEditUrl(hook.webhook_url);
+    setIsAdding(false);
+  };
+
   const handleTest = async (id: string, url: string) => {
     setTestingId(id);
     try {
@@ -93,9 +128,9 @@ export default function DiscordSettings() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: "Cô Minh Check Nhẹ",
+          username: "Cô Kiều Check Nhẹ",
           avatar_url: "https://i.ibb.co/C0W2wF1/cominh.webp",
-          content: "Hello 😎! Cô Minh thử loa nhé. Cả lớp tự động kiểm tra xem xăng nay lên chưa nghen?!",
+          content: "Hello 😎! Cô Kiều thử loa nhé. Cả lớp tự động kiểm tra xem xăng nay lên chưa nghen?!",
         }),
       });
       if (res.ok) {
@@ -204,25 +239,48 @@ export default function DiscordSettings() {
                   className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border bg-white dark:bg-[#1f1f1f] hover:border-[#5865F2] transition-colors gap-4 shadow-sm group"
                   style={{ borderColor: "var(--border)" }}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Typography.Text strong className="text-base truncate">{hook.name}</Typography.Text>
-                      {hook.is_active && <Badge color="#5865F2" text={<span className="text-xs text-[#5865F2] font-semibold">Ready</span>} />}
+                  {editingId === hook.id ? (
+                    <div className="flex-1 min-w-0 pr-4 border-r border-dashed border-gray-200 dark:border-gray-800 flex flex-col gap-2">
+                       <Input 
+                         value={editName} 
+                         onChange={e => setEditName(e.target.value)} 
+                         placeholder="Tên channel" 
+                         size="small"
+                         prefix={<NotificationOutlined className="text-gray-400" />}
+                       />
+                       <Input 
+                         value={editUrl} 
+                         onChange={e => setEditUrl(e.target.value)} 
+                         placeholder="Webhook URL" 
+                         size="small"
+                         prefix={<LinkOutlined className="text-gray-400" />}
+                       />
+                       <Space className="mt-1">
+                         <Button size="small" type="primary" onClick={handleUpdate} className="bg-[#5865F2] hover:!bg-[#4752C4]">Lưu</Button>
+                         <Button size="small" onClick={() => setEditingId(null)}>Huỷ</Button>
+                       </Space>
                     </div>
-                    <Typography.Text type="secondary" className="text-xs truncate block font-mono" style={{ opacity: 0.6 }}>
-                      {hook.webhook_url.replace(/(https:\/\/discord\.com\/api\/webhooks\/[^/]+\/).*/, '$1******************')}
-                    </Typography.Text>
-                  </div>
+                  ) : (
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Typography.Text strong className="text-base truncate">{hook.name}</Typography.Text>
+                        {hook.is_active && <Badge color="#5865F2" text={<span className="text-xs text-[#5865F2] font-semibold">Ready</span>} />}
+                      </div>
+                      <Typography.Text type="secondary" className="text-xs truncate block font-mono" style={{ opacity: 0.6 }}>
+                        {hook.webhook_url.replace(/(https:\/\/discord\.com\/api\/webhooks\/[^/]+\/).*/, '$1******************')}
+                      </Typography.Text>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-6">
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between gap-3 min-w-[120px]">
-                        <Tooltip title="Cho phép AI Cô Minh lấy kênh này xài lúc chat">
-                          <span className="text-xs text-gray-500 cursor-help flex items-center gap-1"><RobotOutlined /> AI Dùng</span>
+                        <Tooltip title="Cho phép AI Cô Kiều lấy kênh này xài lúc chat (Bật/Tắt dùng kênh)">
+                          <span className="text-xs text-gray-500 cursor-help flex items-center gap-1"><RobotOutlined /> Hoạt động</span>
                         </Tooltip>
                         <Switch size="small" checked={hook.is_active} onChange={(c) => handleToggle(hook.id, "is_active", c)} />
                       </div>
-                      <div className="flex items-center justify-between gap-3 min-w-[120px]">
+                      <div className="flex items-center justify-between gap-3 min-w-[120px] hidden">
                         <Tooltip title="Tự động báo giá xăng lên kênh mỗi khi có lệnh chạy ngầm (Cronjob)">
                           <span className="text-xs text-gray-500 cursor-help flex items-center gap-1"><NotificationOutlined /> Tự Báo</span>
                         </Tooltip>
@@ -233,6 +291,14 @@ export default function DiscordSettings() {
                     <div className="w-[1px] h-10 bg-gray-200 dark:bg-gray-800 hidden sm:block"></div>
 
                     <Space>
+                      <Tooltip title="Chỉnh sửa">
+                        <Button 
+                          type="text" 
+                          icon={<EditOutlined className="text-gray-500 hover:text-[#5865F2] transition-colors" />} 
+                          className="hover:bg-[#5865F2]/10"
+                          onClick={() => startEdit(hook)}
+                        />
+                      </Tooltip>
                       <Tooltip title="Gửi một tin nhắn test">
                         <Button 
                           type="text" 

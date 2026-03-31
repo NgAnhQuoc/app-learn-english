@@ -8,9 +8,6 @@ import { Drawer } from "antd";
 import { createChatSession, fetchChatSessions } from "../../../utils/supabase/chat";
 
 export default function KieuGiaXangPage(): React.ReactElement {
-  // Use generic empty states for testing without settings widget
-  const level = "A2 (Pre-Intermediate)";
-  const weakness = "";
 
   const [currentChatId, setCurrentChatId] = useState<string | null>(() =>
     typeof window !== "undefined" ? localStorage.getItem("kieu_gia_xang_chat_id") : null
@@ -122,19 +119,19 @@ export default function KieuGiaXangPage(): React.ReactElement {
         
         <div style={{ flex: 1, minWidth: 0, height: "100%" }}>
           <ChatWindow 
-            level={level} 
-            weakness={weakness} 
             externalChatId={currentChatId}
             onChatCreated={handleSelectChat}
             onChatTitleUpdated={handleTitleUpdated}
             onOpenMobileSidebar={() => setMobileDrawerOpen(true)}
             onMessagesLoaded={() => setLoadingChatId(null)}
-            apiEndpoint="/api/kieu-chat"
+            apiEndpoint="/api/gia-xang"
             subtitle="AI has broad knowledge"
-            welcomeTitle="Chào mừng đến Cô Minh biết tuốt!"
-            welcomeMessage="Mấy đứa mỏ hỗn nay đổ xăng gì, hỏi lẹ cô còn làm sổ sách! ⛽"
+            welcomeTitle="Chào mừng đến Cô Kiều Petrolimex!"
+            welcomeMessage="Em ơi nay đổ xăng gì, hỏi lẹ cô còn làm sổ sách! ⛽"
             inputPlaceholder="Bạn cần hỏi gì không... (Enter gửi, Shift+Enter xuống dòng)"
             namespace="kieu"
+            headerName="Cô Kiều"
+            avatarSrc="/co-kieu-avatar.png"
           />
         </div>
       </div>

@@ -18,22 +18,49 @@ const levelEmoji: Record<string, string> = {
   "Khó": "🔴",
 };
 
-function speak(text: string): void {
+function speak(text: string, accent: "US" | "UK" = "US"): void {
   if (typeof window === "undefined") return;
   window.speechSynthesis.cancel();
 
   const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = "en-US";
+  utt.lang = accent === "UK" ? "en-GB" : "en-US";
   utt.rate = 0.85;
+
+  // Separate voice priorities for US and UK accents
+  const usPriority = [
+    "google us english",     // Chrome - very natural
+    "samantha",              // macOS - natural female US
+    "alex",                  // macOS - premium male US
+    "aaron",                 // macOS - enhanced male US
+    "evan",                  // macOS - enhanced male US
+    "nicky",                 // macOS - enhanced female US
+    "tom",                   // macOS - male US
+  ];
+
+  const ukPriority = [
+    "google uk english",     // Chrome - natural UK
+    "daniel",                // macOS - British male, very natural
+    "kate",                  // macOS - British female
+    "serena",                // macOS - British female
+    "oliver",                // macOS - British male
+    "martha",                // macOS - British female
+  ];
 
   const setVoice = () => {
     const voices = window.speechSynthesis.getVoices();
+    const langPrefix = accent === "UK" ? "en-GB" : "en-US";
     const enVoices = voices.filter((v) => v.lang.startsWith("en"));
-    const maleKeywords = [ "david", "daniel", "alex", "fred", "ralph"];
-    const maleVoice = enVoices.find((v) =>
-      maleKeywords.some((kw) => v.name.toLowerCase().includes(kw))
-    );
-    if (maleVoice) utt.voice = maleVoice;
+    const accentVoices = voices.filter((v) => v.lang === langPrefix);
+    const priority = accent === "UK" ? ukPriority : usPriority;
+    
+    const bestVoice = priority.reduce<SpeechSynthesisVoice | null>((found, keyword) => {
+      if (found) return found;
+      return enVoices.find((v) => v.name.toLowerCase().includes(keyword)) || null;
+    }, null);
+    
+    if (bestVoice) utt.voice = bestVoice;
+    else if (accentVoices.length > 0) utt.voice = accentVoices[0];
+    else if (enVoices.length > 0) utt.voice = enVoices[0];
     window.speechSynthesis.speak(utt);
   };
 
@@ -196,11 +223,15 @@ export default function VocabResultPanel({
                   </div>
                 )}
                 <div className="vocab-phonetic-row">
-                  <span className="vocab-phonetic-label">US</span>
                   <span className="vocab-phonetic">{result.phonetic}</span>
-                  <Tooltip title="Nghe phát âm">
-                    <button className="vocab-speak-btn" onClick={() => speak(result.word || "")} aria-label="Phát âm">
-                      <SoundOutlined />
+                  <Tooltip title="Nghe phát âm US 🇺🇸">
+                    <button className="vocab-speak-btn" onClick={() => speak(result.word || "", "US")} aria-label="Phát âm US">
+                      <span className="vocab-phonetic-label">US</span> <SoundOutlined />
+                    </button>
+                  </Tooltip>
+                  <Tooltip title="Nghe phát âm UK 🇬🇧">
+                    <button className="vocab-speak-btn" onClick={() => speak(result.word || "", "UK")} aria-label="Phát âm UK">
+                      <span className="vocab-phonetic-label">UK</span> <SoundOutlined />
                     </button>
                   </Tooltip>
                 </div>
