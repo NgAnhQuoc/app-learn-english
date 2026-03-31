@@ -126,8 +126,8 @@ export default function KieuGiaXangPage(): React.ReactElement {
             onMessagesLoaded={() => setLoadingChatId(null)}
             apiEndpoint="/api/gia-xang"
             subtitle="AI has broad knowledge"
-            welcomeTitle="Chào mừng đến Cô Kiều Petrolimex!"
-            welcomeMessage="Em ơi nay đổ xăng gì, hỏi lẹ cô còn làm sổ sách! ⛽"
+            welcomeTitle="Chào mừng đến với Cô Kiều Petrolimex!"
+            welcomeMessage="Em ơi nay đổ xăng gì, hỏi lẹ đi nào! ⛽"
             inputPlaceholder="Bạn cần hỏi gì không... (Enter gửi, Shift+Enter xuống dòng)"
             namespace="kieu"
             headerName="Cô Kiều"
