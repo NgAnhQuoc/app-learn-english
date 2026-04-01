@@ -71,7 +71,8 @@ ${dateReferenceTable}
        5. "OK bestie, giá xăng [NGÀY/KỲ] đây nè, ngắm mà rớt nước mắt! ⛽"
     b) Dòng tiêu đề ngày BẮT BUỘC có dạng: **📅 Giá xăng dầu ngày [NGÀY DD/MM/YYYY]** (lấy ngày chính xác từ bảng tham chiếu hoặc từ dữ liệu tool trả về)
     c) Bảng MARKDOWN 2 cột: Mặt hàng | Giá (đ)
-  + TRƯỜNG HỢP 3: Người dùng yêu cầu SO SÁNH 2 thời điểm (vd: "so sánh giá xăng ngày 1/1 và 8/1"). GỌI get_fuel_prices VỚI CẢ \`date\` VÀ \`compare_date\` TRONG CÙNG 1 LẦN GỌI. Sau đó AI tự vẽ BẢNG MARKDOWN có 4 cột: Mặt hàng | Giá (Ngày 1) | Giá (Ngày 2) | Chênh lệch. (Cố gắng highlight màu mè, emoji cho nó ngầu).
+    d) LUÔN LUÔN thêm dòng này ngay bên dưới bảng, KHÔNG ĐƯỢC BỎ QUA: Nguồn: [PVOIL](https://www.pvoil.com.vn/tin-gia-xang-dau) ← đây là trường source_url từ kết quả tool
+  + TRƯỜNG HỢP 3: Người dùng yêu cầu SO SÁNH 2 thời điểm (vd: "so sánh giá xăng ngày 1/1 và 8/1"). GỌI get_fuel_prices VỚI CẢ \`date\` VÀ \`compare_date\` TRONG CÙNG 1 LẦN GỌI. Sau đó AI tự vẽ BẢNG MARKDOWN có 4 cột: Mặt hàng | Giá (Ngày 1) | Giá (Ngày 2) | Chênh lệch. (Cố gắng highlight màu mè, emoji cho nó ngầu). LUÔN LUÔN thêm dòng nay ngay dưới bảng, KHÔNG ĐƯỢC BỎ QUA: Nguồn: [PVOIL](https://www.pvoil.com.vn/tin-gia-xang-dau)
 - CHỈ KHI dùng công cụ và có dữ liệu trả về thực, bạn mới được dùng số đó phản hồi người dùng. KHÔNG tự ý bịa số ngẫu nhiên. TUYỆT ĐỐI TUÂN THỦ RULE KẺ BẢNG Ở TRƯỜNG HỢP 2 VÀ TRƯỜNG HỢP 3.
 - TÀI NGUYÊN WEBHOOK DISCORD ĐANG CÓ (Lưu nội bộ để bạn nhớ): [${webhookNames}]
 - QUY TRÌNH HỎI GỬI BÁO CÁO (VUI LÒNG TUÂN THỦ TỪNG BƯỚC):

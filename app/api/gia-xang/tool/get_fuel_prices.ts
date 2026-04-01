@@ -64,12 +64,13 @@ export const get_fuel_prices = tool({
           is_comparison: true, 
           date1: date || "Hôm nay", 
           date2: compare_date, 
-          data: comparisons 
+          data: comparisons,
+          source_url: "https://www.pvoil.com.vn/tin-gia-xang-dau",
         };
       }
 
       const prices = await scrapeFuelPrices(normalize(date));
-      return { success: true, is_comparison: false, data: prices };
+      return { success: true, is_comparison: false, data: prices, source_url: "https://www.pvoil.com.vn/tin-gia-xang-dau" };
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "PVOIL mất mạng con ạ, không coi được";
       return { success: false, error: msg };
