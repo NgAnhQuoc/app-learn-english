@@ -9,26 +9,29 @@ export const get_fuel_prices = tool({
     compare_date: z.string().optional().describe("Ngày thứ 2 để so sánh (VD: '10/01/2026'). Chú ý: CHỈ điền nếu người dùng có nhu cầu SO SÁNH 2 thời điểm."),
   }),
   execute: async ({ date, compare_date }) => {
-    // Normalize: if date is today, pass undefined so PVOIL returns live data (not historical endpoint which lacks today)
-    const todayVN = new Date().toLocaleDateString("vi-VN", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    // Normalize: if date is today, pass undefined → use live endpoint (/tin-gia-xang-dau)
+    // Historical endpoint (/api/oilprice/load-view?date=...) often lacks data for current day.
+    const now = new Date();
+    const todayDay   = now.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit" });
+    const todayMonth = now.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", month: "2-digit" });
+    const todayYear  = now.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric" });
+
+    const isToday = (d: string): boolean => {
+      const cleaned = d.trim().toLowerCase();
+      if (cleaned.includes("hôm nay") || cleaned.includes("today") || cleaned.includes("hiện tại")) return true;
+      // Match DD/MM/YYYY format
+      const m = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+      if (m) {
+        return m[1].padStart(2,"0") === todayDay &&
+               m[2].padStart(2,"0") === todayMonth &&
+               m[3] === todayYear;
+      }
+      return false;
+    };
+
     const normalize = (d?: string): string | undefined => {
       if (!d) return undefined;
-      const cleaned = d.trim();
-      // Match "hôm nay", "today", or today's exact date string
-      if (
-        cleaned.toLowerCase().includes("hôm nay") ||
-        cleaned.toLowerCase().includes("today") ||
-        cleaned.toLowerCase().includes("hiện tại") ||
-        cleaned === todayVN
-      ) {
-        return undefined; // Use live endpoint
-      }
-      return cleaned;
+      return isToday(d) ? undefined : d.trim(); // undefined → live endpoint
     };
 
     try {
