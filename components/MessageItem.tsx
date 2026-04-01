@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Avatar } from "antd";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -25,47 +26,70 @@ interface MessageItemProps {
 }
 
 function ToolStep({ tool }: { tool: ToolInvocation }) {
+  const [open, setOpen] = React.useState(false);
   const isDone = tool.state === "result";
 
+  // Smart display: if result has sent_to_discord, swap panels
+  const result = tool.result as Record<string, unknown> | undefined;
+  const hasSentContent = isDone && result && "sent_to_discord" in result;
+
+  const inputContent = hasSentContent
+    ? JSON.stringify(result!.sent_to_discord, null, 2).replace(/\\n/g, '\n')
+    : JSON.stringify(tool.args, null, 2).replace(/\\n/g, '\n');
+
+  const outputContent = hasSentContent
+    ? JSON.stringify(result!.status, null, 2).replace(/\\n/g, '\n')
+    : isDone ? JSON.stringify(tool.result, null, 2).replace(/\\n/g, '\n') : null;
+
   return (
-    <details className="group tool-step-anim">
-      <summary className="list-none cursor-pointer select-none outline-none flex items-center gap-2 py-0.5 hover:opacity-80 transition-opacity">
-        {/* Arrow */}
-        <svg className="w-2.5 h-2.5 text-gray-600 transform transition-transform group-open:rotate-90 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
+    <div className="tool-step-anim tool-call-card">
+      {/* Header / Summary row */}
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="tool-call-header"
+      >
         {/* Status dot */}
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDone ? "bg-emerald-500" : "bg-yellow-400 animate-pulse"}`} />
-        {/* Label */}
-        <span className="text-[13px] text-gray-400">
-          {isDone ? "Completed" : "Calling"}{" "}
-          <span className="text-(--accent) font-medium">
-            {getToolIcon(tool.toolName)} {getToolDisplayName(tool.toolName)}
-          </span>
+        <span className={`tool-call-dot ${isDone ? "tool-call-dot--done" : "tool-call-dot--pending"}`} />
+        {/* Tool name */}
+        <span className="tool-call-name">
+          {getToolIcon(tool.toolName)} {getToolDisplayName(tool.toolName)}
         </span>
         {!isDone && (
-          <span className="text-[10px] text-yellow-400/60 animate-pulse ml-0.5">●●●</span>
+          <span className="text-[10px] text-yellow-400/60 animate-pulse">●●●</span>
         )}
-      </summary>
+        {/* Chevron */}
+        <svg
+          className={`tool-call-chevron ${open ? "tool-call-chevron--open" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
 
-      {/* Expanded detail */}
-      <div className="ml-[22px] mt-1.5 mb-2 border-l border-white/10 pl-3 flex flex-col gap-1.5 text-[11px]">
-        <div className="text-gray-500 font-mono">
-          <span className="text-gray-600 uppercase tracking-wider text-[10px]">args </span>
-          <span className="text-gray-300 bg-white/5 px-1.5 py-0.5 rounded ml-1 break-all">{JSON.stringify(tool.args)}</span>
-        </div>
-        {isDone && (
-          <div>
-            <span className="text-gray-600 uppercase tracking-wider text-[10px]">result</span>
-            <div className="mt-1 bg-[#080808] border border-white/8 rounded p-2 overflow-x-auto">
-              <pre className="m-0 font-mono text-green-400/80 text-[10px] leading-relaxed max-h-[180px] overflow-y-auto whitespace-pre-wrap">
-                {JSON.stringify(tool.result, null, 2)}
+      {/* Body — input/output panels */}
+      {open && (
+        <div className="tool-call-body">
+          {/* INPUT */}
+          <div className="tool-io-section">
+            <div className="tool-io-label tool-io-label--input">│ INPUT</div>
+            <pre className="tool-io-code">
+              {inputContent}
+            </pre>
+          </div>
+
+          {/* OUTPUT */}
+          {isDone && outputContent && (
+            <div className="tool-io-section">
+              <div className="tool-io-label tool-io-label--output">│ OUTPUT</div>
+              <pre className="tool-io-code tool-io-code--output">
+                {outputContent}
               </pre>
             </div>
-          </div>
-        )}
-      </div>
-    </details>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

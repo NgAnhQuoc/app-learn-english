@@ -149,13 +149,23 @@ export const send_discord_report = tool({
       }
       
       return {
-        success: true,
-        message: "Đã gửi thông báo đẹp lung linh!",
-        results,
+        sent_to_discord: {
+          title: embed.title,
+          description: embed.description,
+          channels: results.map(r => r.name),
+        },
+        status: {
+          success: true,
+          message: "Đã gửi thông báo đẹp lung linh!",
+          results,
+        },
       };
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Lỗi không xác định";
-      return { success: false, error: errorMessage };
+      return {
+        sent_to_discord: null,
+        status: { success: false, error: errorMessage },
+      };
     }
   },
 });
