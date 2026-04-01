@@ -8,40 +8,44 @@ export async function POST(req: Request) {
   const activeWebhooks = await getActiveWebhooks();
   const webhookNames = activeWebhooks.length > 0 ? activeWebhooks.map(w => w.name).join(", ") : "Hệ thống chưa cài đặt nhóm Discord nào";
 
-  // Pre-compute all relative dates server-side for 100% accuracy
-  // All times are in Vietnam timezone (Asia/Ho_Chi_Minh)
-  const fmt = (d: Date) => d.toLocaleDateString("vi-VN", {
+  // Reliable VN date: use Intl.DateTimeFormat parts to avoid locale-string parsing bugs
+  const vnParts = new Intl.DateTimeFormat("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+    day: "2-digit", month: "2-digit", year: "numeric",
+  }).formatToParts(new Date());
+  const vnDay   = Number(vnParts.find(p => p.type === "day")!.value);
+  const vnMonth = Number(vnParts.find(p => p.type === "month")!.value);
+  const vnYear  = Number(vnParts.find(p => p.type === "year")!.value);
 
-  const nowVN = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
-  
-  const yesterday    = new Date(nowVN); yesterday.setDate(nowVN.getDate() - 1);
-  const d2ago        = new Date(nowVN); d2ago.setDate(nowVN.getDate() - 2);
-  const d3ago        = new Date(nowVN); d3ago.setDate(nowVN.getDate() - 3);
-  const d7ago        = new Date(nowVN); d7ago.setDate(nowVN.getDate() - 7);  // 1 tuần trước
-  const d14ago       = new Date(nowVN); d14ago.setDate(nowVN.getDate() - 14); // 2 tuần trước
-  const d1Monthago   = new Date(nowVN); d1Monthago.setMonth(nowVN.getMonth() - 1); // 1 tháng trước
-  const d3Monthsago  = new Date(nowVN); d3Monthsago.setMonth(nowVN.getMonth() - 3);
-  const startOfMonth = new Date(nowVN.getFullYear(), nowVN.getMonth(), 1); // đầu tháng này
-  const startOfLastM = new Date(nowVN.getFullYear(), nowVN.getMonth() - 1, 1); // đầu tháng trước
+  // Build a UTC-noon base so arithmetic is always safe (no DST/midnight edge cases)
+  const vnBase = new Date(Date.UTC(vnYear, vnMonth - 1, vnDay, 5, 0, 0)); // UTC 05:00 = VN noon
+
+  const addDays   = (d: Date, n: number) => new Date(d.getTime() + n * 864e5);
+  const addMonths = (d: Date, n: number) => {
+    const r = new Date(d); r.setUTCMonth(r.getUTCMonth() + n); return r;
+  };
+
+  // Format always DD/MM/YYYY (explicit, not locale-dependent)
+  const fmt = (d: Date) => {
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const yyyy = d.getUTCFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
 
   const dateReferenceTable = `
 | Cụm từ người dùng nói | Ngày tương ứng (DD/MM/YYYY) |
 |---|---|
-| hôm nay / today | ${fmt(nowVN)} |
-| hôm qua / yesterday | ${fmt(yesterday)} |
-| 2 ngày trước | ${fmt(d2ago)} |
-| 3 ngày trước | ${fmt(d3ago)} |
-| 1 tuần trước / tuần trước | ${fmt(d7ago)} |
-| 2 tuần trước | ${fmt(d14ago)} |
-| 1 tháng trước / tháng trước | ${fmt(d1Monthago)} |
-| 3 tháng trước | ${fmt(d3Monthsago)} |
-| đầu tháng này | ${fmt(startOfMonth)} |
-| đầu tháng trước | ${fmt(startOfLastM)} |
+| hôm nay / today | ${fmt(vnBase)} |
+| hôm qua / yesterday | ${fmt(addDays(vnBase, -1))} |
+| 2 ngày trước | ${fmt(addDays(vnBase, -2))} |
+| 3 ngày trước | ${fmt(addDays(vnBase, -3))} |
+| 1 tuần trước / tuần trước | ${fmt(addDays(vnBase, -7))} |
+| 2 tuần trước | ${fmt(addDays(vnBase, -14))} |
+| 1 tháng trước / tháng trước | ${fmt(addMonths(vnBase, -1))} |
+| 3 tháng trước | ${fmt(addMonths(vnBase, -3))} |
+| đầu tháng này | ${fmt(new Date(Date.UTC(vnYear, vnMonth - 1, 1, 5, 0, 0)))} |
+| đầu tháng trước | ${fmt(addMonths(new Date(Date.UTC(vnYear, vnMonth - 1, 1, 5, 0, 0)), -1))} |
 `.trim();
 
   const dynamicSystemPrompt = `Bạn là "Cô Kiều" - một người phụ nữ quyền lực, phong cách "hàng thịt", bán luôn cả giá xăng.
