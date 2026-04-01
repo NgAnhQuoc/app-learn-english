@@ -42,6 +42,8 @@ export async function fetchChatSessions(ns: ChatNamespace = "cominh"): Promise<C
   return data || [];
 }
 
+const TOOL_TAG = "|||TOOL_DATA|||";
+
 export async function fetchChatMessages(chatId: string, ns: ChatNamespace = "cominh"): Promise<Message[]> {
   const { messagesTable } = getTables(ns);
   const { data, error } = await supabase
@@ -55,21 +57,45 @@ export async function fetchChatMessages(chatId: string, ns: ChatNamespace = "com
     return [];
   }
 
-  return data.map((msg) => ({
-    id: msg.id,
-    role: msg.role as "user" | "assistant" | "system",
-    content: msg.content,
-  }));
+  return data.map((msg) => {
+    let content = msg.content || "";
+    let toolInvocations = undefined;
+    
+    // Check if the content has serialized tool invocations
+    if (content.includes(TOOL_TAG)) {
+      const parts = content.split(TOOL_TAG);
+      content = parts[0];
+      try {
+        toolInvocations = JSON.parse(parts[1]);
+      } catch (e) {
+        console.error("Failed to parse tool data from history", e);
+      }
+    }
+
+    return {
+      id: msg.id,
+      role: msg.role as "user" | "assistant" | "system",
+      content,
+      ...(toolInvocations ? { toolInvocations } : {})
+    };
+  });
 }
 
 export async function saveMessage(chatId: string, message: Message, ns: ChatNamespace = "cominh") {
   const { messagesTable } = getTables(ns);
+  
+  // Serialize tool invocations to be saved safely into the single "content" column mapping.
+  let contentToSave = message.content || "";
+  if (message.toolInvocations && message.toolInvocations.length > 0) {
+    contentToSave += TOOL_TAG + JSON.stringify(message.toolInvocations);
+  }
+
   const { error } = await supabase.from(messagesTable).insert([
     {
       id: uuidv4(), // Explicitly send a new UUID to fix Turbopack cache issues
       chat_id: chatId,
       role: message.role,
-      content: message.content,
+      content: contentToSave,
     },
   ]);
   if (error) {

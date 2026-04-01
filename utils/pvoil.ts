@@ -5,10 +5,14 @@ export interface FuelPrice {
   price: string;
 }
 
-export async function scrapeFuelPrices(): Promise<FuelPrice[]> {
+export async function scrapeFuelPrices(date?: string): Promise<FuelPrice[]> {
   try {
-    const res = await fetch("https://www.pvoil.com.vn/tin-gia-xang-dau", {
-      next: { revalidate: 3600 }, // Cache for 1 hour
+    const url = date 
+      ? `https://www.pvoil.com.vn/api/oilprice/load-view?date=${encodeURIComponent(date)}`
+      : "https://www.pvoil.com.vn/tin-gia-xang-dau";
+
+    const res = await fetch(url, {
+      next: { revalidate: date ? 86400 : 3600 }, // Cache historical data longer
     });
     
     if (!res.ok) {
