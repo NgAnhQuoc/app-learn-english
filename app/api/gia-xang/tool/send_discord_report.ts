@@ -3,10 +3,13 @@ import { z } from "zod";
 import { scrapeFuelPrices } from "@/utils/pvoil";
 
 export const send_discord_report = tool({
-  description: "Gửi báo cáo giá xăng dạng embed đẹp vào kênh Webhook Discord. Có thể gửi giá hôm nay, giá một ngày cụ thể hoặc BẢNG SO SÁNH 2 thời điểm.",
+  description: `Gửi báo cáo giá xăng dạng embed vào kênh Discord.
+⚠️ QUAN TRỌNG: CHỈ GỌI TOOL NÀY 1 LẦN DUY NHẤT trong mỗi lượt trả lời. KHÔNG gọi lại nhiều lần.
+- Để gửi đến TẤT CẢ nhóm: truyền target_group="all" → tool tự động gửi đến mọi nhóm, KHÔNG cần gọi lại cho từng nhóm.
+- Để gửi đến 1 nhóm cụ thể: truyền đúng tên nhóm vào target_group.`,
   parameters: z.object({
     greeting: z.string().describe("Một câu chào lầy lội ngắn gọn của Cô Kiều để hiển thị trên Discord (VD: 'Chào các em! Giá xăng hôm nay nè 🔥'). Gọi người dùng là 'em', KHÔNG gọi 'mấy đứa'."),
-    target_group: z.string().describe("Tên của nhóm Discord cần gửi. Truyền chữ 'all' nếu muốn gửi cho tất cả các nhóm."),
+    target_group: z.string().describe("Tên của nhóm Discord cần gửi. Truyền 'all' để gửi TẤT CẢ nhóm trong 1 lần gọi duy nhất."),
     is_comparison: z.boolean().optional().describe("BẮT BUỘC set TRUE nếu người dùng muốn gửi BẢNG SO SÁNH. Mặc định là FALSE."),
     date: z.string().optional().describe("Thời điểm 1 (VD: '08/01/2026'). Nếu chỉ lấy hôm nay thì bỏ trống."),
     compare_date: z.string().optional().describe("Thời điểm 2 để so sánh (VD: '10/01/2026' hoặc 'Hiện tại'). CHỈ điền khi is_comparison=true."),

@@ -24,11 +24,11 @@ function ToolStatusIndicator({ isLoading, messages, renderAvatar }: {
   if (!activeTools || activeTools.length === 0) {
     if (lastMsg?.role !== "user") return null;
     return (
-      <div className="message-row message-row--ai">
+      <div className="message-row message-row--ai tool-step-anim">
         <div className="message-avatar message-avatar--ai">{renderAvatar(undefined)}</div>
         <div className="flex items-center gap-2 text-[13px] text-gray-500 py-0.5">
           <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse shrink-0" />
-          <span className="animate-pulse text-gray-400">Đang phân tích...</span>
+          <span className="animate-pulse text-gray-400">Đợi cô một xíu...</span>
         </div>
       </div>
     );
@@ -43,7 +43,7 @@ function ToolStatusIndicator({ isLoading, messages, renderAvatar }: {
         {activeTools.map(tool => {
           const isDone = tool.state === "result";
           return (
-            <div key={tool.toolCallId} className="flex items-center gap-2 py-0.5 text-[13px]">
+            <div key={tool.toolCallId} className="flex items-center gap-2 py-0.5 text-[13px] tool-step-anim">
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDone ? "bg-emerald-500" : "bg-yellow-400 animate-pulse"}`} />
               <span className="text-gray-400">
                 {isDone ? "Completed" : "Calling"}{" "}
@@ -140,7 +140,7 @@ export default function ChatWindow({
     loadHistory();
   }, [externalChatId]);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } =
+  const { messages, input, setInput, handleInputChange, isLoading, append } =
     useChat({
       api: apiEndpoint || "/api/chat",
       id: externalChatId || "default",
@@ -246,33 +246,38 @@ export default function ChatWindow({
     syncUserMessage();
   }, [messages, externalChatId]);
 
-  const onCustomSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onCustomSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
+    if (e) e.preventDefault();
     if (!isLoading && input.trim()) {
       const isFirstMessage = messages.length === 0 && initialMessages.length === 0;
       const currentInput = input;
+      
+      // Clear input immediately for better UI responsiveness
+      setInput("");
 
       if (!externalChatId) {
-        createChatSession(namespace).then(newId => {
-          if (newId) {
-            onChatCreated(newId);
-            updateChatTitle(newId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
-          }
-        });
-      } else if (isFirstMessage) {
-        // If the chat was created instantly but has no messages, update its title in background
-        updateChatTitle(externalChatId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
+        // Await chat creation fully so the database record exists
+        const newId = await createChatSession(namespace);
+        if (newId) {
+          onChatCreated(newId);
+          updateChatTitle(newId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
+          
+          // Use append instead of handleSubmit to inject the message safely into the new context
+          append({ role: "user", content: currentInput });
+        }
+      } else {
+        if (isFirstMessage) {
+          updateChatTitle(externalChatId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
+        }
+        append({ role: "user", content: currentInput });
       }
-      
-      // Call handleSubmit synchronously to eliminate UI lag/double submit
-      handleSubmit(e);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      onCustomSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+      onCustomSubmit();
     }
   };
 

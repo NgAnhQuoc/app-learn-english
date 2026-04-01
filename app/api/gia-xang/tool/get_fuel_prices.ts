@@ -9,11 +9,33 @@ export const get_fuel_prices = tool({
     compare_date: z.string().optional().describe("Ngày thứ 2 để so sánh (VD: '10/01/2026'). Chú ý: CHỈ điền nếu người dùng có nhu cầu SO SÁNH 2 thời điểm."),
   }),
   execute: async ({ date, compare_date }) => {
+    // Normalize: if date is today, pass undefined so PVOIL returns live data (not historical endpoint which lacks today)
+    const todayVN = new Date().toLocaleDateString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const normalize = (d?: string): string | undefined => {
+      if (!d) return undefined;
+      const cleaned = d.trim();
+      // Match "hôm nay", "today", or today's exact date string
+      if (
+        cleaned.toLowerCase().includes("hôm nay") ||
+        cleaned.toLowerCase().includes("today") ||
+        cleaned.toLowerCase().includes("hiện tại") ||
+        cleaned === todayVN
+      ) {
+        return undefined; // Use live endpoint
+      }
+      return cleaned;
+    };
+
     try {
       if (compare_date) {
         const [prices1, prices2] = await Promise.all([
-          scrapeFuelPrices(date),
-          scrapeFuelPrices(compare_date)
+          scrapeFuelPrices(normalize(date)),
+          scrapeFuelPrices(normalize(compare_date))
         ]);
         const getNum = (str: string) => Number(str.replace(/[^\d]/g, "")) || 0;
         
@@ -43,7 +65,7 @@ export const get_fuel_prices = tool({
         };
       }
 
-      const prices = await scrapeFuelPrices(date);
+      const prices = await scrapeFuelPrices(normalize(date));
       return { success: true, is_comparison: false, data: prices };
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "PVOIL mất mạng con ạ, không coi được";

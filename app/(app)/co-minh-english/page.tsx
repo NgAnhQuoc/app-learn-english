@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import ChatWindow from "../../../components/ChatWindow";
 import ChatHistorySidebar from "../../../components/ChatHistorySidebar";
 import SettingsWidget from "../../../components/SettingsWidget";
-import { createChatSession } from "../../../utils/supabase/chat";
-import { Drawer } from "antd";
+import { createChatSession, fetchChatSessions } from "../../../utils/supabase/chat";
+import { Drawer, Spin } from "antd";
 
 export default function CoMinhEnglishPage(): React.ReactElement {
   const [level, setLevel] = useState(() => 
@@ -34,8 +34,7 @@ export default function CoMinhEnglishPage(): React.ReactElement {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [loadingChatId, setLoadingChatId] = useState<string | null>(null);
-
-
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Keep in sync when sidebar changes (via storage event)
   useEffect(() => {
@@ -83,6 +82,33 @@ export default function CoMinhEnglishPage(): React.ReactElement {
     setMobileDrawerOpen(false);
     setIsCreatingChat(false);
   };
+
+  useEffect(() => {
+    async function init() {
+      const existing = await fetchChatSessions(); // default is 'cominh'
+      
+      if (currentChatId) {
+        // Verify if the local cached ID still exists in the database
+        if (!existing.find(c => c.id === currentChatId)) {
+          if (existing.length > 0) {
+            handleSelectChat(existing[0].id);
+          } else {
+            await handleNewChat();
+          }
+        }
+      } else {
+        if (existing && existing.length > 0) {
+          handleSelectChat(existing[0].id);
+        } else {
+          await handleNewChat();
+        }
+      }
+      setIsInitializing(false);
+    }
+    
+    init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleClearChat = () => {
     handleSelectChat("");
@@ -136,15 +162,21 @@ export default function CoMinhEnglishPage(): React.ReactElement {
         </Drawer>
         
         <div style={{ flex: 1, minWidth: 0, height: "100%" }}>
-          <ChatWindow 
-            level={level} 
-            weakness={weakness} 
-            externalChatId={currentChatId}
-            onChatCreated={handleSelectChat}
-            onChatTitleUpdated={handleTitleUpdated}
-            onOpenMobileSidebar={() => setMobileDrawerOpen(true)}
-            onMessagesLoaded={() => setLoadingChatId(null)}
-          />
+          {isInitializing ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <Spin size="large" />
+            </div>
+          ) : (
+            <ChatWindow 
+              level={level} 
+              weakness={weakness} 
+              externalChatId={currentChatId}
+              onChatCreated={handleSelectChat}
+              onChatTitleUpdated={handleTitleUpdated}
+              onOpenMobileSidebar={() => setMobileDrawerOpen(true)}
+              onMessagesLoaded={() => setLoadingChatId(null)}
+            />
+          )}
         </div>
       </div>
 

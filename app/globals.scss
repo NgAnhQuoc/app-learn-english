@@ -327,6 +327,15 @@ $breakpoint-mobile: 768px;
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes toolStepIn {
+  from { opacity: 0; transform: translateX(-10px); height: 0; margin: 0; overflow: hidden; }
+  to   { opacity: 1; transform: translateX(0); height: auto; margin-top: 2px; margin-bottom: 2px; }
+}
+
+.tool-step-anim {
+  animation: toolStepIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
 .message-row {
   display: flex;
   align-items: flex-end;

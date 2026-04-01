@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import ChatWindow from "../../../components/ChatWindow";
 import ChatHistorySidebar from "../../../components/ChatHistorySidebar";
 import DiscordSettings from "./components/DiscordSettings";
-import { Drawer } from "antd";
+import { Drawer, Spin } from "antd";
 import { createChatSession, fetchChatSessions } from "../../../utils/supabase/chat";
 
 export default function KieuGiaXangPage(): React.ReactElement {
@@ -16,6 +16,7 @@ export default function KieuGiaXangPage(): React.ReactElement {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [loadingChatId, setLoadingChatId] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const handleSelectChat = (id: string) => {
     const newId = id || null;
@@ -46,19 +47,28 @@ export default function KieuGiaXangPage(): React.ReactElement {
 
   useEffect(() => {
     async function init() {
-      if (!currentChatId) {
-        const existing = await fetchChatSessions("kieu");
+      const existing = await fetchChatSessions("kieu");
+      
+      if (currentChatId) {
+        // Verify if the local cached ID still exists in the database
+        if (!existing.find(c => c.id === currentChatId)) {
+          if (existing.length > 0) {
+            handleSelectChat(existing[0].id);
+          } else {
+            await handleNewChat();
+          }
+        }
+      } else {
         if (existing && existing.length > 0) {
           handleSelectChat(existing[0].id);
         } else {
-          handleNewChat();
+          await handleNewChat();
         }
       }
+      setIsInitializing(false);
     }
-    // Only run this logic initially
-    if (!currentChatId && !isCreatingChat) {
-      init();
-    }
+    
+    init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -72,7 +82,7 @@ export default function KieuGiaXangPage(): React.ReactElement {
 
   return (
     <div className="vocab-split-page">
-      <div style={{ display: "flex", height: "100%", width: "100%", maxWidth: "1400px", overflow: "hidden", margin: "0 auto" }}>
+      <div className="flex h-full w-full max-w-[1400px] overflow-hidden mx-auto">
         
         {/* Desktop Sidebar */}
         <div className="chat-sidebar-desktop relative">
@@ -118,21 +128,27 @@ export default function KieuGiaXangPage(): React.ReactElement {
         </Drawer>
         
         <div style={{ flex: 1, minWidth: 0, height: "100%" }}>
-          <ChatWindow 
-            externalChatId={currentChatId}
-            onChatCreated={handleSelectChat}
-            onChatTitleUpdated={handleTitleUpdated}
-            onOpenMobileSidebar={() => setMobileDrawerOpen(true)}
-            onMessagesLoaded={() => setLoadingChatId(null)}
-            apiEndpoint="/api/gia-xang"
-            subtitle="AI has broad knowledge"
-            welcomeTitle="Chào mừng đến với Cô Kiều Petrolimex!"
-            welcomeMessage="Em ơi nay đổ xăng gì, hỏi lẹ đi nào! ⛽"
-            inputPlaceholder="Bạn cần hỏi gì không... (Enter gửi, Shift+Enter xuống dòng)"
-            namespace="kieu"
-            headerName="Cô Kiều"
-            avatarSrc="/co-kieu-avatar.png"
-          />
+          {isInitializing ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <Spin size="large" />
+            </div>
+          ) : (
+            <ChatWindow 
+              externalChatId={currentChatId}
+              onChatCreated={handleSelectChat}
+              onChatTitleUpdated={handleTitleUpdated}
+              onOpenMobileSidebar={() => setMobileDrawerOpen(true)}
+              onMessagesLoaded={() => setLoadingChatId(null)}
+              apiEndpoint="/api/gia-xang"
+              subtitle="AI has broad knowledge"
+              welcomeTitle="Chào mừng đến với Cô Kiều Petrolimex!"
+              welcomeMessage="Em ơi nay đổ xăng gì, hỏi lẹ đi nào! ⛽"
+              inputPlaceholder="Bạn cần hỏi gì không... (Enter gửi, Shift+Enter xuống dòng)"
+              namespace="kieu"
+              headerName="Cô Kiều"
+              avatarSrc="/co-kieu-avatar.png"
+            />
+          )}
         </div>
       </div>
     </div>

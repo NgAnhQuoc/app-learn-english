@@ -28,7 +28,7 @@ function ToolStep({ tool }: { tool: ToolInvocation }) {
   const isDone = tool.state === "result";
 
   return (
-    <details className="group">
+    <details className="group tool-step-anim">
       <summary className="list-none cursor-pointer select-none outline-none flex items-center gap-2 py-0.5 hover:opacity-80 transition-opacity">
         {/* Arrow */}
         <svg className="w-2.5 h-2.5 text-gray-600 transform transition-transform group-open:rotate-90 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
