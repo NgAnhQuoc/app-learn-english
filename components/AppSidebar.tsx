@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { App, Layout, Menu, Typography, Button } from "antd";
-import { MessageOutlined, BookOutlined, LogoutOutlined, CarOutlined } from "@ant-design/icons";
+import { MessageOutlined, BookOutlined, LogoutOutlined, CarOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { logout } from "../app/login/actions";
 
 interface AppSidebarProps {
@@ -12,9 +12,10 @@ interface AppSidebarProps {
 }
 
 const menuItems = [
-  { key: "/co-minh-english", icon: <MessageOutlined />, label: "Cô Minh English" },
-  { key: "/co-lanh-vocabulary", icon: <BookOutlined />, label: "Từ điển Cô Lành" },
-  { key: "/kieu-gia-xang", icon: <CarOutlined />, label: "Kiều Giá Xăng" },
+  { key: "/co-minh-english", icon: <MessageOutlined />, label: "Chat with AI" },
+  { key: "/co-lanh-vocabulary", icon: <BookOutlined />, label: "Vocabulary" },
+  { key: "/timeline-youtube", icon: <PlayCircleOutlined />, label: "Real Vocab TV" },
+  { key: "/kieu-gia-xang", icon: <CarOutlined />, label: "Price Checker Oil" },
 ];
 
 export default function AppSidebar({ collapsed, onCollapse }: AppSidebarProps): React.ReactElement {
@@ -23,7 +24,7 @@ export default function AppSidebar({ collapsed, onCollapse }: AppSidebarProps): 
   const [loggingOut, setLoggingOut] = useState(false);
   const { modal } = App.useApp();
 
-  const selectedKey = menuItems.find((item) => pathname.endsWith(item.key))?.key ?? "/co-minh-english";
+  const selectedKey = menuItems.find((item) => pathname.includes(item.key))?.key ?? "/co-minh-english";
 
   const handleMenuClick = ({ key }: { key: string }) => {
     router.push(key);
