@@ -3,11 +3,62 @@
 import { useChat } from "ai/react";
 import { Button, Input, Typography, App } from "antd";
 import { ArrowUpOutlined, MenuOutlined } from "@ant-design/icons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import type { TextAreaRef } from "antd/es/input/TextArea";
+import Image from "next/image";
 import MessageItem from "./MessageItem";
 import { createChatSession, fetchChatMessages, saveMessage, updateChatTitle, ChatNamespace } from "../utils/supabase/chat";
 import { Message } from "ai";
+import { getToolDisplayName, getToolIcon } from "@/utils/toolNames";
+
+function ToolStatusIndicator({ isLoading, messages, renderAvatar }: {
+  isLoading: boolean;
+  messages: Message[];
+  renderAvatar: (className?: string, size?: number) => React.ReactNode;
+}) {
+  if (!isLoading) return null;
+
+  const lastMsg = messages[messages.length - 1];
+  const activeTools = lastMsg?.role === "assistant" ? lastMsg?.toolInvocations : undefined;
+
+  if (!activeTools || activeTools.length === 0) {
+    if (lastMsg?.role !== "user") return null;
+    return (
+      <div className="message-row message-row--ai tool-step-anim">
+        <div className="message-avatar message-avatar--ai">{renderAvatar(undefined)}</div>
+        <div className="flex items-center gap-2 text-[13px] text-gray-500 py-0.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse shrink-0" />
+          <span className="animate-pulse text-gray-400">Đợi cô một xíu...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (lastMsg?.role === "assistant" && lastMsg?.content) return null;
+
+  return (
+    <div className="message-row message-row--ai">
+      <div className="message-avatar message-avatar--ai">{renderAvatar(undefined)}</div>
+      <div className="flex flex-col gap-0.5">
+        {activeTools.map(tool => {
+          const isDone = tool.state === "result";
+          return (
+            <div key={tool.toolCallId} className="flex items-center gap-2 py-0.5 text-[13px] tool-step-anim">
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDone ? "bg-emerald-500" : "bg-yellow-400 animate-pulse"}`} />
+              <span className="text-gray-400">
+                {isDone ? "Completed" : "Calling"}{" "}
+                <span className="text-(--accent) font-medium">
+                  {getToolIcon(tool.toolName)} {getToolDisplayName(tool.toolName)}
+                </span>
+              </span>
+              {!isDone && <span className="text-[10px] text-yellow-400/60 animate-pulse">●●●</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function ChatWindow({ 
   level, 
@@ -23,9 +74,11 @@ export default function ChatWindow({
   welcomeMessage,
   inputPlaceholder,
   namespace = "cominh",
+  headerName,
+  avatarSrc,
 }: { 
-  level: string; 
-  weakness: string; 
+  level?: string; 
+  weakness?: string; 
   externalChatId: string | null; 
   onChatCreated: (id: string) => void; 
   onChatTitleUpdated: () => void;
@@ -37,9 +90,18 @@ export default function ChatWindow({
   welcomeMessage?: React.ReactNode;
   inputPlaceholder?: string;
   namespace?: ChatNamespace;
+  headerName?: string;
+  avatarSrc?: string;
 }) {
   const { notification } = App.useApp();
   const { Text } = Typography;
+
+  const renderAvatar = (className?: string, size = 36) =>
+    avatarSrc ? (
+      <Image src={avatarSrc} alt="AI Avatar" width={size} height={size} className={className} style={{ borderRadius: '50%', objectFit: 'cover' }} />
+    ) : (
+      <span className={className}>👩‍🏫</span>
+    );
 
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -78,20 +140,15 @@ export default function ChatWindow({
     loadHistory();
   }, [externalChatId]);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } =
+  const { messages, input, setInput, handleInputChange, isLoading, append } =
     useChat({
       api: apiEndpoint || "/api/chat",
       id: externalChatId || "default",
       initialMessages,
+      maxSteps: 5,
       body: {
-        level,
-        weakness,
-      },
-      onFinish: async (message) => {
-        if (externalChatId) {
-          await saveMessage(externalChatId, message, namespace);
-          savedMessageIds.current.add(message.id);
-        }
+        ...(level ? { level } : {}),
+        ...(weakness ? { weakness } : {}),
       },
       onError: (error) => {
         notification.error({
@@ -104,9 +161,54 @@ export default function ChatWindow({
       }
     });
 
+  // Save all new messages (including tool invocations) when the AI finishes streaming
+  useEffect(() => {
+    if (isLoading || !externalChatId) return;
+    // When loading stops, find all unsaved messages and save them
+    const unsaved = messages.filter(m => !savedMessageIds.current.has(m.id));
+    unsaved.forEach(m => {
+      savedMessageIds.current.add(m.id);
+      saveMessage(externalChatId, m, namespace);
+    });
+  }, [isLoading, externalChatId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<TextAreaRef>(null);
+
+  // Group consecutive AI messages (e.g. tool execution steps + final text) into a single visual bubble
+  const displayMessages = useMemo(() => {
+    const list: Message[] = [];
+    let currentAiMsg: Message | null = null;
+
+    for (const m of messages) {
+      if (m.role === "assistant") {
+        if (!currentAiMsg) {
+          currentAiMsg = { ...m };
+        } else {
+          if (m.content) {
+            currentAiMsg.content = currentAiMsg.content ? currentAiMsg.content + "\n\n" + m.content : m.content;
+          }
+          if (m.toolInvocations && m.toolInvocations.length > 0) {
+            currentAiMsg.toolInvocations = [
+              ...(currentAiMsg.toolInvocations || []),
+              ...m.toolInvocations,
+            ];
+          }
+        }
+      } else {
+        if (currentAiMsg) {
+          list.push(currentAiMsg);
+          currentAiMsg = null;
+        }
+        list.push(m);
+      }
+    }
+    if (currentAiMsg) {
+      list.push(currentAiMsg);
+    }
+    return list;
+  }, [messages]);
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -144,33 +246,38 @@ export default function ChatWindow({
     syncUserMessage();
   }, [messages, externalChatId]);
 
-  const onCustomSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onCustomSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
+    if (e) e.preventDefault();
     if (!isLoading && input.trim()) {
       const isFirstMessage = messages.length === 0 && initialMessages.length === 0;
       const currentInput = input;
+      
+      // Clear input immediately for better UI responsiveness
+      setInput("");
 
       if (!externalChatId) {
-        createChatSession(namespace).then(newId => {
-          if (newId) {
-            onChatCreated(newId);
-            updateChatTitle(newId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
-          }
-        });
-      } else if (isFirstMessage) {
-        // If the chat was created instantly but has no messages, update its title in background
-        updateChatTitle(externalChatId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
+        // Await chat creation fully so the database record exists
+        const newId = await createChatSession(namespace);
+        if (newId) {
+          onChatCreated(newId);
+          updateChatTitle(newId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
+          
+          // Use append instead of handleSubmit to inject the message safely into the new context
+          append({ role: "user", content: currentInput });
+        }
+      } else {
+        if (isFirstMessage) {
+          updateChatTitle(externalChatId, currentInput.slice(0, 40), namespace).then(() => onChatTitleUpdated());
+        }
+        append({ role: "user", content: currentInput });
       }
-      
-      // Call handleSubmit synchronously to eliminate UI lag/double submit
-      handleSubmit(e);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      onCustomSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+      onCustomSubmit();
     }
   };
 
@@ -186,9 +293,9 @@ export default function ChatWindow({
             onClick={onOpenMobileSidebar}
             style={{ marginRight: 12, color: "var(--text-secondary)" }}
           />
-          <span className="chat-header-avatar">👩‍🏫</span>
+          {renderAvatar("chat-header-avatar", 40)}
           <div>
-            <Text className="chat-header-name">Cô Minh</Text>
+            <Text className="chat-header-name">{headerName || "Cô Minh"}</Text>
             <div className="chat-header-status">
               <span className="status-dot" />
               <Text className="chat-header-sub">{subtitle || "AI English Teacher"} • Online</Text>
@@ -204,7 +311,7 @@ export default function ChatWindow({
             {[1, 2, 3].map(i => (
               <div key={i} className={`message-row ${i % 2 === 0 ? 'message-row--user' : 'message-row--ai'}`}>
                 <div className={`message-avatar ${i % 2 === 0 ? 'message-avatar--user' : 'message-avatar--ai'}`}>
-                  {i % 2 === 0 ? '🧑' : '👩‍🏫'}
+                  {i % 2 === 0 ? '🧑' : renderAvatar('message-avatar--ai')}
                 </div>
                 <div 
                   className={`message-bubble ${i % 2 === 0 ? 'message-bubble--user' : 'message-bubble--ai'}`}
@@ -215,9 +322,9 @@ export default function ChatWindow({
         </div>
         ) : (
           <>
-            {messages.length === 0 && (
+            {displayMessages.length === 0 && (
               <div className="chat-empty">
-                <div className="chat-empty-emoji">👩‍🏫</div>
+                <div className="chat-empty-emoji">{renderAvatar(undefined, 80)}</div>
                 <Text className="chat-empty-title">{welcomeTitle || "Chào mừng đến lớp học của Cô Minh!"}</Text>
                 <Text className="chat-empty-desc">
                   {welcomeMessage || "Hãy bắt đầu bằng cách nhập một câu tiếng Anh — cô sẽ sửa và giúp bạn luyện tập ngay! 😄"}
@@ -228,25 +335,18 @@ export default function ChatWindow({
             {/* Historical messages: fade the whole batch in at once (no per-row bounce) */}
             {initialMessages.length > 0 && (
               <div key={historyRevealKey} className="chat-history-batch">
-                {messages.filter(m => initialMessages.some(im => im.id === m.id)).map((message) => (
-                  <MessageItem key={message.id} message={message} />
+                {displayMessages.filter(m => initialMessages.some(im => im.id === m.id)).map((message) => (
+                  <MessageItem key={message.id} message={message} avatarSrc={avatarSrc} />
                 ))}
               </div>
             )}
 
             {/* New messages: use the per-row bounce animation */}
-            {messages.filter(m => !initialMessages.some(im => im.id === m.id)).map((message) => (
-              <MessageItem key={message.id} message={message} />
+            {displayMessages.filter(m => !initialMessages.some(im => im.id === m.id)).map((message) => (
+              <MessageItem key={message.id} message={message} avatarSrc={avatarSrc} />
             ))}
 
-            {isLoading && (
-              <div className="message-row message-row--ai">
-                <div className="message-avatar message-avatar--ai">👩‍🏫</div>
-                <div className="message-bubble message-bubble--ai typing-indicator">
-                  <span /><span /><span />
-                </div>
-              </div>
-            )}
+            <ToolStatusIndicator isLoading={isLoading} messages={messages} renderAvatar={renderAvatar} />
 
             <div ref={messagesEndRef} />
           </>

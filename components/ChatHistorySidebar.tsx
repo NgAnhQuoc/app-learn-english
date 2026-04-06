@@ -108,9 +108,10 @@ export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewC
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                {loadingChatId === chat.id ? (
+                {loadingChatId === chat.id && (
                   <LoadingOutlined style={{ color: 'var(--accent)', fontSize: 13 }} spin />
-                ) : (
+                )}
+                {!loadingChatId && !isCreatingChat && (
                   <Popconfirm
                     title="Xóa đoạn chat này?"
                     description="Bạn chắc chắn muốn xóa?"
@@ -131,7 +132,7 @@ export default function ChatHistorySidebar({ currentChatId, onSelectChat, onNewC
         )}
       </div>
 
-      {chats.length > 0 && (
+      {chats.length > 0 && !loadingChatId && !isCreatingChat && (
         <div style={{ padding: "16px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
           <Popconfirm
             title="Xóa TẤT CẢ đoạn chat?"
